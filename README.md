@@ -1,11 +1,5 @@
 # Electoral Cycle Network Analysis: Dutch Parliament 2023-2024
 
-## Research Question
-
-**Do co-voting patterns between Dutch political parties change across the electoral cycle?**
-
----
-
 ## Study Design
 
 | Period | Timeframe | Event |
@@ -20,8 +14,7 @@
 
 ```
 ├── README.md                      # This file
-├── NETWORK_DESCRIPTIVES.md        # Complete statistical analysis
-├── QUICK_STATS.md                 # Paper-ready tables
+├── 3 SNA 2.Rproj                  # R project file
 ├── report/                        # Quarto report documents
 │   ├── SNA4DSprojectTemplate2025.qmd   # Main report source
 │   ├── r-references.bib           # Bibliography
@@ -89,9 +82,8 @@ This loads the Kieskompas ideology data and demonstrates how to:
 ## Key Files
 
 ### Documentation
-- **`NETWORK_DESCRIPTIVES.md`** ⭐ - Complete data & network descriptions with all statistics
-- **`QUICK_STATS.md`** - Copy-paste tables for papers/presentations
-- **`report/SNA4DSprojectTemplate2025.qmd`** - Full methodology section (Dataset + Biases)
+- **`README.md`** - Project overview and quick start guide
+- **`report/SNA4DSprojectTemplate2025.qmd`** ⭐ - Full methodology section (Dataset + Biases)
 
 ### Key Visualizations
 | File | Content |
@@ -156,25 +148,3 @@ For report rendering:
 ```bash
 # Install Quarto: https://quarto.org/docs/get-started/
 ```
-
----
-
-## Project Status
-
-✅ Data collection complete (October 2024)  
-✅ Three-period network analysis complete  
-✅ Z-score normalization implemented  
-✅ Vote unanimity validation complete  
-✅ Methodology section written  
-🔄 Study 1 (MRQAP) - In progress  
-🔄 Study 2 (TERGM) - In progress  
-
----
-
-## Contact & Citation
-
-**Group 11 - JADS 2024/2025**
-
-When citing this work:
-- Data: Tweede Kamer der Staten-Generaal (2023-2024). Open Data Portal. https://opendata.tweedekamer.nl
-- Ideology: Kieskompas (2023). Tweede Kamerverkiezingen 2023. https://www.kieskompas.nl
