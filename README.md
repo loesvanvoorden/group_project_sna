@@ -30,13 +30,15 @@
 │   └── _output/                   # Rendered PDFs
 ├── data/                          # Raw voting data
 │   ├── voting_data_2023_preelection.csv
-│   └── voting_data_clean.csv      # 2024 data
+│   ├── voting_data_clean.csv      # 2024 data
+│   └── political_axes_data.csv    # Party ideology (Kieskompas 2023)
 ├── scripts/                       # R analysis scripts
 │   ├── three_period_network_analysis.R
 │   ├── three_period_network_analysis_normalized.R
 │   ├── analyze_components.R
 │   ├── generate_network_statistics.R
-│   └── analyze_vote_unanimity.R
+│   ├── analyze_vote_unanimity.R
+│   └── add_ideology_attributes.R  # Helper: Add Kieskompas data to networks
 └── results/
     ├── visualizations/            # Network plots (PDFs)
     ├── statistics/                # Summary statistics (CSV)
@@ -73,6 +75,15 @@ Rscript scripts/three_period_network_analysis_normalized.R
 Rscript scripts/generate_network_statistics.R
 ```
 
+**Add ideology attributes (for Study 1):**
+```bash
+Rscript scripts/add_ideology_attributes.R
+```
+
+This loads the Kieskompas ideology data and demonstrates how to:
+- Add left-right and conservative-progressive coordinates as node attributes
+- Calculate ideological distance matrices for MRQAP analysis
+
 ---
 
 ## Key Files
@@ -100,8 +111,13 @@ Rscript scripts/generate_network_statistics.R
 ## Data Sources
 
 - **Tweede Kamer OData API** - Parliamentary voting records (2023-2024)
+  - 82,365 votes across 5,213 motions from 23 parties
+  - Files: `voting_data_2023_preelection.csv`, `voting_data_clean.csv`
+  
 - **Kieskompas 2023** - Party ideological positions (for Study 1)
-- Total: 82,365 votes across 5,213 motions from 23 parties
+  - 2D ideology: Left-Right & Conservative-Progressive axes
+  - Normalized scale: -1 to +1 on each dimension
+  - File: `political_axes_data.csv` (19 parties with coordinates)
 
 ---
 

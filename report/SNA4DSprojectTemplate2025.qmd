@@ -11,7 +11,7 @@ author:
     affiliations:
       - ref: jads
       - ref: tiu
-  - name: Roos 
+  - name: Roos Mast
     affiliations:
       - ref: jads
       - ref: tue
@@ -19,7 +19,7 @@ author:
     affiliations:
       - ref: jads
       - ref: tue
-  - name: Max 
+  - name: Max de Leeuw
     affiliations:
       - ref: jads
       - ref: tue
