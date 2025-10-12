@@ -1,0 +1,417 @@
+---
+title: "Co-Voting Patterns in the Dutch Parliament: A Social Network Analysis Approach"
+subtitle: Group 11
+date: 2025-09-01
+author:
+  - name: Anne Barnasconi
+    affiliations:
+      - ref: jads
+      - ref: tiu
+  - name: Vera Wentzel
+    affiliations:
+      - ref: jads
+      - ref: tiu
+  - name: Roos 
+    affiliations:
+      - ref: jads
+      - ref: tue
+  - name: Loes van Voorden
+    affiliations:
+      - ref: jads
+      - ref: tue
+  - name: Max 
+    affiliations:
+      - ref: jads
+      - ref: tue
+  - name: Guido Beijer
+    affiliations:
+      - ref: jads
+      - ref: tue
+
+affiliations:
+  - id: jads
+    name: Jheronimus Academy of Data Science
+  - id: tiu
+    name: Tilburg University
+  - id: tue
+    name: Eindhoven University of Technology
+
+include-in-header:
+  - text: |
+      \usepackage{longtable}
+      \usepackage{graphicx}
+      \usepackage{booktabs}
+      \usepackage{dcolumn}
+      \usepackage{float}
+
+
+
+bibliography: r-references.bib
+csl: apa-6th-edition.csl
+
+toc: true
+toc-depth: 2
+
+format:
+  pdf: 
+    documentclass: article
+    pagesize: a4
+    number-sections: true
+    df-print: kable
+    fig-cap-location: top
+    geometry:
+      - left=1.5in
+      - right=1.5in
+      - heightrounded
+
+execute:
+    echo: false
+---
+
+
+
+```{r}
+#| label: analysis-preferences
+#| include: false
+
+# Seed for random number generation
+set.seed(42)
+knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
+```
+
+{{< pagebreak >}}
+<!--
+## Abstract (200 words) – 0.3 POINTS {.unnumbered}
+
+*Summarize the report. Write this as the very last thing.*
+
+*   What is the main topic you are addressing?
+*   What are your research questions and hypotheses?
+*   What are your results and the main conclusion?
+-->
+## Introduction (1000 words) – 0.5 POINTS {#sec-intro}
+
+Over the past decades, the Dutch political landscape has become increasingly fragmented. With 54 different party's registered in the Netherlands, of which 15 are currently represented in the Dutch House of Representatives, it is becoming increasingly difficult for parties to form a majority coalition. The growing polarization of political positions further complicates this, eventually leading to three consecutive falls of the government since 2017.
+
+The aim of this study is to analyse the co-voting patterns between parties with regards to proposed motions in the Dutch House of Representatives. It will evaluate if co-voting patterns can provide insights relevant for coalition formation, and reveal factors that influence the dynamics of parliamentary democracy. Additionally, this study will examine how the co-voting patterns of political parties change in the run-up to the Dutch elections of October 29th, 2025. Using social network analysis techniques, this can uncover cronyism between political parties by evaluating whether parties tend to favorite proposed motions of certain parties more in hopes of forming a coalition as elections get closer.
+
+This paper is divided into two studies. The first study will analyse how similar the voting behavior of parties is based on the ideological distance between parties. It will do so by answering the following research question:
+
+> *RQ1: How does ideological distance between Dutch political parties affect their voting similarity?*
+
+The hypothesis for this research question in the following:
+
+> *H1: Dutch political parties that are ideologically closer will show higher voting similarity.*
+
+Ideological distance on the left-right continuum is widely recognized as a key explanatory factor for inter-party cooperation and voting similarity @fowler2006connecting. While most research describes party ideology along a one-dimensional left-right axis, party ideology in the Netherlands is also often captured along a conservative-progressive dimension. This study contributes to the literature by examining whether this second dimension helps explain voting similarity between parties in the Dutch parliament. It does this by applying a Multiple Regression Quadratic Assignment Procedure (MRQAP) to test whether ideological proximity on both the left-right and conservative-progressive axes is associated with higher inter-party voting similarity. 
+
+The second study of this paper will focus on analyzing how to co-voting patterns between parties change in the run-up to the election. This study will answer the following research question:
+
+> *RQ2: How do co-voting patterns between Dutch political parties change in the run-up to the election?*
+
+To answer this research question, a directional TERM will be used where an edge from Party A to Party B describes the proportion of votes in favor on a motion of Party B by Party A. The following table describes the formulated hypotheses and the associated TERGM terms.
+
+| Hypothesis | ERGM Term | Motivation |
+| --------------- | --------------- | --------------- |
+| H1: If Party A votes in favor for motions proposed by Party B, Party B is more likely to vote in favor of motions proposed by Party A over time.  | `mutual` | The `mutual` term captures the tendency for outgoing ties to co-occur with incoming ties between parties. |
+|            |           |            |
+| H2: If Party A votes similarly to Party B and Party B votes similarly to Party C, Party A is more likely to vote similarly to Party C over time.  | `gwesp` | The `gwesp` term can measure whether co-voting behavior tends to form triads. This can be informative for explaining coalition potential with respect to voting behavior. |
+|            |           |            |
+| H3: Parties that have the potential to form a coalition, even if ideologically distant, are more likely to increase co-voting in the run-up to elections. | `edgecov(coalition_opportunity × absdiff(ideology) x time_to_election)` | The `absdiff` term captures how the political ideology distance influences co-voting patterns. The interaction with coalition opportunity examines whether co-voting increases despite ideological distance when there is an opporunity for parties to form a coalition. |
+|            |           |            |
+| H4: Parties that have been in a coalition before are more likely to show stronger co-voting patterns, and this effect intensifies closer to the election. | `edgecov(same_coalition_before x time_to_election)` | The `edgecov` term captures the extent to which a ties between parties with regards to having been in the coalition before influences the tie formation in the context of co-voting patterns. |
+
+## Methodology {#sec-methodology}
+
+### Dataset {#sec-dataset}
+
+#### Data Source and Collection
+
+The data used in this analysis is retrieved from the Open Data Portal of the Dutch House of Representatives [@TweedeKamerData], a freely accessible repository providing transparency about parliamentary activities. The portal contains voting records, parliamentary documents, and member information through an OData API that has been set up since 2008. The parliamentary data system integrates four primary sources: Parlis (parliamentary documents including motions and voting results), Sesam (MP data and party affiliations), VLOS (detailed meeting reports), and Toezeggingenregistratie (ministerial commitments). These systems continuously add to the parliamentary Data Warehouse, making sure there is transparency in all parliamentary activities.
+
+For our analysis, we focus on the period 2023-2024, covering the electoral cycle surrounding the November 22, 2023 general election and the following cabinet formation on July 2, 2024. Voting data were extracted via automated API queries using R (version 4.x), filtering for Voor (Yes) and Tegen (No) votes only, with absent votes excluded. The data collection was performed in October 2025, so all voting records are up to date.
+
+To enrich the dataset for Study 1, we combine the parliamentary voting data with ideological positioning data from Kieskompas [@Kieskompas2023], a widely-used tool during Dutch elections that maps party positions on policy issues. For the 2023 election, we extract party positions from Kieskompas visualizations, mapping them to normalized scales for left-right economic ideology and progressive-conservative cultural ideology. This combination of datasets allows us to examine how ideological distance influences voting similarity.
+
+#### Network Construction
+
+We build party co-voting networks where nodes represent political parties (fracties) and edges represent co-voting relationships. For parties $i$ and $j$, the raw edge weight is defined as:
+
+$$w_{ij} = \text{\# motions where } i, j \text{ both voted the same (Yes/No)}$$
+
+Additionally, we compute the agreement rate: $\text{Agreement rate}_{ij} = w_{ij} / \text{\# motions where } i, j \text{ both voted}$, which we report as a descriptive statistic. Edges are created only when both parties voted on at least 5 shared motions to ensure reliability. This construction yields one weighted, undirected party-party network for every electoral cycle period.
+
+#### Temporal Periods
+
+To study electoral cycle dynamics, we devide the data into three periods that align with political events:
+
+```{r}
+#| label: tbl-periods
+#| tbl-cap: "Temporal Periods and Political Context"
+
+library(knitr)
+periods <- data.frame(
+  Period = c("Far from Election", "Close to Election", "Post Formation"),
+  Timeframe = c("Q1+Q2 2023 (Jan 20 – Jun 29)", 
+                "Q3+Q4 2023 (Jul 5 – Nov 13)", 
+                "Q3+Q4 2024 (Jul 5 – Dec 20)"),
+  Duration = c("160 days", "131 days", "168 days"),
+  Context = c("Normal operations (Rutte IV)", 
+              "Campaign; election Nov 22", 
+              "New cabinet (Schoof I, Jul 2)")
+)
+kable(periods, align = 'llll')
+```
+
+#### Descriptive Statistics
+
+@tbl-data-summary shows voting activity across the three periods, displaying variation in parliamentary activity.
+
+```{r}
+#| label: tbl-data-summary
+#| tbl-cap: "Raw Voting Data by Period"
+
+data_summary <- data.frame(
+  Metric = c("Duration (days)", "Total Votes", "Unique Motions", 
+             "Active Parties", "Votes per Motion", "Mean Agreement Rate"),
+  Far = c("160", "36,788", "1,761", "23", "20.9", "63.6%"),
+  Close = c("131", "32,756", "1,548", "22", "21.2", "56.2%"),
+  Post = c("168", "12,821", "1,952", "15", "6.6", "62.2%")
+)
+kable(data_summary, align = 'lrrr')
+```
+
+The Post-formation period shows a 65% reduction in total votes despite having the longest duration. Notably, agreement rates decline during the campaign period (63.6% → 56.2%), then go back up post-formation (→ 62.2%), showing already some evidence for our hypothesis about electoral cycle effects.
+
+@tbl-network-metrics shows network-level statistics, where we can see how party cooperation patterns differ across periods.
+
+```{r}
+#| label: tbl-network-metrics
+#| tbl-cap: "Network Structure Comparison"
+
+network_metrics <- data.frame(
+  Metric = c("Nodes (parties)", "Edges", "Density", "Mean Degree", 
+             "Components", "Mean Edge Weight"),
+  Far = c("23", "190", "0.75", "16.5", "4", "1,123"),
+  Close = c("22", "210", "0.91", "19.1", "2", "862"),
+  Post = c("15", "105", "1.00", "14.0", "1", "201")
+)
+kable(network_metrics, align = 'lrrr')
+```
+
+Network density keeps on increasing (0.75 → 1.00), with the Post-formation network having complete connectivity. However, mean edge weights drop by 82% from Far to Post, showing normalization is necessary for good cross-period comparison.
+
+@fig-networks shows the three party co-voting networks visualized with ideological positioning. Node colors represent ideological spectrum (red = left, orange = center, blue = right), node size reflects degree centrality, and edge thickness represents cooperation strength.
+
+![Party Co-voting Networks Across the Electoral Cycle (Raw Weights). Edges shown are 30% above mean weight for visual clarity.](../results/visualizations/network_comparison_three_periods.pdf){#fig-networks width=100%}
+
+#### Z-Score Normalization
+
+The dramatic variation in voting volume makes raw edge weights incomparable across periods. To address this, we apply z-score standardization within each period:
+
+$$z_{ij}^{(t)} = \frac{w_{ij}^{(t)} - \mu^{(t)}}{\sigma^{(t)}}$$
+
+where $w_{ij}^{(t)}$ is the raw weight in period $t$, and $\mu^{(t)}$, $\sigma^{(t)}$ are the mean and standard deviation of all edge weights in that period. This transforms each period to $\mu = 0$, $\sigma = 1$, making sure we can compare relative cooperation patterns rather than absolute volumes. Values of $z > 1.0$ indicate above-average cooperation (84th percentile), while $z > 2.0$ indicates very strong cooperation (97.5th percentile).
+
+```{r}
+#| label: tbl-zscore
+#| tbl-cap: "Z-Score Normalized Edge Statistics"
+
+zscore_stats <- data.frame(
+  Metric = c("Total Edges", "Strong Ties (z>1)", "% Strong Ties", "Very Strong (z>2)"),
+  Far = c("190", "32", "16.8%", "5"),
+  Close = c("210", "33", "15.7%", "1"),
+  Post = c("105", "21", "20.0%", "0")
+)
+kable(zscore_stats, align = 'lrrr')
+```
+
+Post-formation networks show the highest proportion of strong ties (20%). @fig-networks-normalized displays the z-score normalized networks, where edge prominence is determined by standardized cooperation strength rather than raw counts, allowing direct comparison across periods.
+
+![Z-Score Normalized Party Networks. Edge highlighting based on z > 1.0 (above-average cooperation within each period).](../results/visualizations/network_comparison_normalized.pdf){#fig-networks-normalized width=100%}
+
+#### Vote Unanimity Validation
+
+To validate that discovered agreement patterns show genuine party cooperation rather than unanimous votes, we analyzed vote split distributions. @tbl-unanimity shows that only 22-27% of motions are near-unanimous (≥90% one-sided), with 23-27% being balanced. This tells us there is good enough variation for meaningful network analysis.
+
+```{r}
+#| label: tbl-unanimity
+#| tbl-cap: "Vote Unanimity Statistics"
+
+unanimity_display <- data.frame(
+  Period = c("Far from Election", "Close to Election", "Post Formation"),
+  Mean_Unanimity = c("76.2%", "73.9%", "77.3%"),
+  Near_Unanimous = c("26.2%", "21.7%", "26.8%"),
+  Balanced = c("23.3%", "26.6%", "23.0%")
+)
+names(unanimity_display) <- c("Period", "Mean Unanimity", "≥90% Unanimous", "Balanced (40-60%)")
+kable(unanimity_display, align = 'lrrr')
+```
+
+#### Ideological Variables (Study 1)
+
+For Study 1, party ideology is measured along two dimensions: the economic axis (left-right: redistribution vs. market orientation) and the cultural axis (progressive-conservative: liberal vs. traditional values). We extract party positions from Kieskompas 2023 visualizations [@Kieskompas2023; @fig-kieskompas], mapping visual coordinates to normalized scales ranging from -1 to +1 for each dimension.
+
+![Kieskompas 2023: Party Positions on Economic (Left-Right) and Cultural (Progressive-Conservative) Dimensions](Picture1.png){#fig-kieskompas width=70%}
+
+@fig-coordinates shows the extracted coordinate positions used in our analysis. From this visualization, we map party positions onto the two-dimensional ideological space by measuring distances between parties along both axes.
+
+![Extracted Party Coordinates from Kieskompas Visualization](Picture2.png){#fig-coordinates width=50%}
+
+Euclidean distance between party pairs is calculated as:
+
+$$d_{ij}^{ideology} = \sqrt{(x_i^{LR} - x_j^{LR})^2 + (x_i^{PC} - x_j^{PC})^2}$$
+
+where $x_i^{LR}$ is party $i$'s left-right position and $x_i^{PC}$ is its progressive-conservative position. These ideological coordinates will be mapped as node attributes in our network analysis for Study 1, allowing us to test whether ideological proximity on both dimensions predicts voting similarity between parties.
+
+#### Data Usefulness
+
+This data is well-suited for studying electoral cycle dynamics and party cooperation for several reasons. First, the scraped data contains every motion voted upon attached to exact timestamps, making room for temporal analysis connected to certain electoral events. Second, the data shows preferences objectively through actual voting behavior instead of stated goals. 
+
+For Study 1, the combination of voting data and ideological measures allows us to test whether similarity in voting patterns can be explained by ideological proximity on two dimensions (economic and cultural). For Study 2, the temporal variation in voting volume and agreement rates gives us sufficient data to examine how parties might change their cooperation patterns as elections approach.
+
+#### Potential Biases and Limitations
+
+**Database complexity and implicit knowledge requirements:** The parliamentary database has a complicated structure with limited documentation of the underlying data model [@Hug2010]. While the general organization is explained, specific meanings of data fields often require independent research to understand correctly. This creates two main challenges. First, without clear field definitions, researchers might misuse variables, potentially introducing errors into their analysis. Second, the data contains implicit information about Dutch parliamentary procedures that may not be obvious to those unfamiliar with the system [@Mikhaylov2012].
+
+A clear example involves voting patterns: extracted vote counts often show around 20 votes per motion despite 150 parliamentary seats. This occurs because MPs from opposing parties frequently make informal agreements to both abstain (known as "pairing"), effectively canceling each other's votes [@Cox2005]. Without knowing this way of working, researchers might incorrectly interpret low participation rates. For our study, we address this by: (1) working with party-level data where individual abstentions matter less, (2) requiring at least 5 shared votes between parties to create edges, and (3) reading parliamentary documentation to verify our data interpretation.
+
+**Participation rate variation:** The 65% drop in voting activity post-formation (36,788 votes → 12,821 votes) could reduce the reliability of some party connections and create temporal bias [@Kossinets2006]. We address this by: (1) using z-score normalization within each period, which standardizes patterns regardless of total volume, (2) requiring minimum thresholds (≥5 shared votes) to ensure connections are based on enough observations, and (3) analyzing each period separately rather than combining data with different participation rates.
+
+**Ideological measurement error:** Kieskompas does not make public how their classification algorithm works, leaving uncertainty about which policy positions were weighted and how they were combined into the two-dimensional ideological space [@Louwerse2012; @Bakker2015]. Additionally, extracting coordinate positions from published visualizations introduces measurement error because our mapped positions try to approximate Kieskompas's outputs rather than being the true algorithm values.
+
+These measurement issues could affect how precisely we calculate ideological distances. However, this should be manageable: (1) The error likely affects all parties the same rather than favoring certain groups, (2) we use ideology to explain voting patterns (not as our main outcome), which makes results less sensitive to measurement error, and (3) using two dimensions (economic and cultural) reveals richer ideological structure than single left-right scales, maybe making up for some imperfections. For robustness checks, alternative ideological measures (such as Chapel Hill Expert Survey or Manifesto Project data) could be used.
+
+**Temporal validity:** Our ideology data from Kieskompas 2023 reflects campaign positions, while our post-formation analysis uses voting data from 2024. Party positions might have changed during coalition negotiations [@Gross2021]. However, this shift is likely small for already established parties, of which we expect the ideological positions to be the same after formation. We treat ideology as a stable node attribute.
+
+<!--
+### Data analysis (Research Rationale) {#sec-data-analysis}
+
+(about 500 words) – 1 POINTS
+
+* Why are these two methods suitable for your data?
+* Why are these two methods suitable for your research questions?
+* Are there other methods to address these questions? If yes, why are the
+methods you chose better for this case?
+
+## Results {#sec-results}
+
+(about 2000 words)
+
+### Model 1 {#sec-model1}
+
+(about 1000 words) – 2.5 POINTS
+
+* Present your results appropriately (plots, tables…) and discuss your findings
+in plain English
+* Discuss the meaning of your findings in relation to your hypothesis. (half of
+the points evaluated in this other part)
+
+
+```{r}
+#| label: tbl-example
+#| tbl-cap: Example dataframe printed
+
+# table example
+cn <- c("age", "gender", "eyes_col")
+one <- c(7, "M", "BLUE")
+two <- c(8, "F", "BROWN")
+three <- c(8, "M", "GREEN")
+four <- c(7, "F", "PINK")
+tab <- rbind(cn, one, two, three, four)
+rownames(tab) <- NULL
+
+knitr::kable(as.data.frame(tab))
+```
+
+
+### ERGM {#sec-ergm}
+
+(about 1000) – 2.5 POINTS
+
+* Present your results appropriately (plots, tables…) and discuss your findings
+in plain English
+* Discuss the meaning of your findings in relation to your hypothesis. (half of
+the points evaluated in this other part)
+
+
+```{r}
+#| label: ergm-that-takes-long
+#| cache: true # now Quarto will save the objects in this cell in the background, and will only re-compute them, if the source code changes! Make sure to give it a label, so it can keep track of which cell is cached.
+
+ctl <- c(4.17, 5.58, 5.18, 6.11, 4.50, 4.61, 5.17, 4.53, 5.33, 5.14)
+trt <- c(4.81, 4.17, 4.41, 3.59, 5.87, 3.83, 6.03, 4.89, 4.32, 4.69)
+group <- gl(2, 10, 20, labels = c("Ctl", "Trt"))
+weight <- c(ctl, trt)
+lm.D9 <- lm(weight ~ group)
+lm.D90 <- lm(weight ~ group - 1)
+```
+
+
+
+
+```{r}
+#| output: asis
+#| label: tbl-model2
+#| tbl-cap: "Comparison of Model 1 and Model 2"
+
+# model results display example, using the cached variables, so you can tinker with the presentation without re-running any ERGMs :D
+
+# install.packages("texreg") if needed
+texreg::texreg(
+  list(lm.D9, lm.D90), 
+  dcolumn = TRUE, 
+  booktabs = TRUE, 
+  label = NaN, 
+  table = FALSE, 
+  use.packages = FALSE)
+```
+
+
+
+
+
+```{r}
+#| label: fig-reg_plot
+#| fig-cap: " Visual Comparison of Model 1 and Model 2"
+
+# model results display example, using the cached variables, so you can tinker with the presentation without re-running any ERGMs :D
+
+# install.packages("texreg") if needed
+texreg::plotreg(list(lm.D9, lm.D90))
+```
+
+## Conclusion {#sec-conclusion}
+
+(about 350 words) – 0.7 POINTS
+
+What were your topic and research questions again? (1 sentence)
+
+What did you learn from the two analysis you run? *** most important point to
+address 0.5 POINTS here
+
+Who benefits from your findings?
+
+What does remain an open problem?
+
+Can you give suggestions for future work in this area?
+
+## References {.unnumbered}
+
+::: {#refs}
+:::
+
+{{< pagebreak >}}
+
+## Technology statement student(s)
+
+For the assignment, you must add the technology statement, using the text below.
+Replace the text in capital letters with the requested information.
+
+> During the preparation of this work, I/We used **[NAME TOOL / SERVICE / VERSION OF AI TOOL]**
+> in order to **[REASON]**. The following parts of the assignment were affected/generated by AI tool usage:
+> **[INTRODUCTION / METHODS / xxx, DISCUSSION]**. After using this tool/service, **[NAME STUDENT(S)]**
+> evaluated the validity of the tool’s outputs, including the sources that generative AI tools have used,
+> and edited the content as needed. As a consequence, **[NAME STUDENT(S)]** take(s) full responsibility
+> for the content of their work.
+-->
