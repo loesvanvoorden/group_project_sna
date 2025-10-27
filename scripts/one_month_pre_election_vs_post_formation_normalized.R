@@ -32,9 +32,9 @@ cat("• Allows comparison of relative cooperation patterns independent of vote 
 cat("• Minimum 5 shared votes required for edge creation\n\n")
 
 cat("VISUALIZATION:\n")
-cat("• RED nodes = Left-wing parties (SP, PvdD, GroenLinks, PvdA, etc.)\n")
-cat("• ORANGE nodes = Center parties (D66, Volt)\n")  
-cat("• BLUE nodes = Right-wing parties (VVD, CDA, PVV, FVD, etc.)\n")
+cat("• RED nodes = Left-wing parties (BIJ1, PvdD, GroenLinks-PvdA, SP, DENK, ChristenUnie, 50PLUS)\n")
+cat("• ORANGE nodes = Center parties (Volt, D66, NSC, BBB)\n")  
+cat("• BLUE nodes = Right-wing parties (CDA, VVD, SGP, PVV, JA21, FVD, BVNL)\n")
 cat("• Node size = degree centrality (more connections = larger)\n")
 cat("• Edge thickness = z-score (relative cooperation strength)\n")
 cat("• EDGE HIGHLIGHTING: Edges with z-score > 1.0 shown prominently\n")
@@ -234,19 +234,27 @@ create_party_network_normalized <- function(agreements, all_parties) {
   V(g)$strength <- strength(g, weights = E(g)$weight)
   V(g)$betweenness <- betweenness(g, weights = NA)
   
-  # Party categories for coloring based on ideology
+  # Party categories for coloring based on Kieskompas ideology data
   party_names <- V(g)$name
+  # Left: negative values (< -0.2)
+  # Center: close to 0 (-0.2 to 0.2)
+  # Right: positive values (> 0.2)
   V(g)$party_type <- ifelse(
-    party_names %in% c("SP", "PvdD", "BIJ1", "GroenLinks", "PvdA", "DENK"), "Left",
-    ifelse(party_names %in% c("D66", "Volt"), "Center", "Right")
+    party_names %in% c("BIJ1", "PvdD", "GroenLinks", "PvdA", "GroenLinks-PvdA", "DENK", "SP", "ChristenUnie", "50PLUS"), "Left",
+    ifelse(party_names %in% c("Volt", "D66", "NSC", "BBB"), "Center", "Right")
   )
   
-  # Ideology for layout (approximate left-right positions)
+  # Ideology for layout (left-right positions based on Kieskompas)
+  # Far left: BIJ1, PvdD, GroenLinks-PvdA, DENK, SP
+  # Center-left: ChristenUnie, 50PLUS, Volt, D66, NSC
+  # Center-right: BBB, PVV, CDA
+  # Right: VVD, SGP
+  # Far right: JA21, FVD, BVNL
   V(g)$ideology <- ifelse(
-    party_names %in% c("SP", "PvdD", "BIJ1"), 1,
-    ifelse(party_names %in% c("GroenLinks", "PvdA", "DENK"), 2,
-    ifelse(party_names %in% c("D66", "Volt"), 3,
-    ifelse(party_names %in% c("VVD", "CDA", "ChristenUnie", "BBB"), 4, 5)))
+    party_names %in% c("BIJ1", "PvdD", "GroenLinks", "PvdA", "GroenLinks-PvdA", "DENK", "SP"), 1,
+    ifelse(party_names %in% c("ChristenUnie", "50PLUS", "Volt", "D66", "NSC"), 2,
+    ifelse(party_names %in% c("BBB", "PVV", "CDA"), 3,
+    ifelse(party_names %in% c("VVD", "SGP"), 4, 5)))
   )
   
   cat(sprintf("    Final network: %d nodes, %d edges, density = %.3f\n\n", 

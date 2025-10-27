@@ -1,6 +1,6 @@
 # ============================================================================
-# ONE MONTH PRE-ELECTION vs POST-FORMATION NETWORK ANALYSIS
-# Focus: 1 Month Before Election vs 1 Month After Cabinet Formation
+# THREE MONTH PRE-ELECTION vs POST-FORMATION NETWORK ANALYSIS
+# Focus: 3 Months Before Election vs 3 Months After Cabinet Formation
 # ============================================================================
 
 library(lubridate)
@@ -12,16 +12,16 @@ library(ggplot2)
 # ============================================================================
 
 cat("===============================================================================\n")
-cat("ONE MONTH PRE-ELECTION vs POST-FORMATION NETWORK ANALYSIS\n")
-cat("Focus: 1 Month Before Election vs 1 Month After Cabinet Formation\n")
+cat("THREE MONTH PRE-ELECTION vs POST-FORMATION NETWORK ANALYSIS\n")
+cat("Focus: 3 Months Before Election vs 3 Months After Cabinet Formation\n")
 cat("===============================================================================\n\n")
 
 cat("RESEARCH QUESTION:\n")
-cat("How do co-voting patterns between parties change from one month before election to one month after cabinet formation?\n\n")
+cat("How do co-voting patterns between parties change from three months before election to three months after cabinet formation?\n\n")
 
 cat("TEMPORAL DESIGN:\n")
-cat("• PRE-ELECTION: October 22, 2023 - November 21, 2023 (1 month before election)\n")
-cat("• POST-FORMATION: July 5, 2024 - August 4, 2024 (1 month after formation)\n")
+cat("• PRE-ELECTION: August 22, 2023 - November 21, 2023 (3 months before election)\n")
+cat("• POST-FORMATION: July 5, 2024 - October 4, 2024 (3 months after formation)\n")
 cat("• Election Date: November 22, 2023\n")
 cat("• Cabinet Formation: July 5, 2024\n\n")
 
@@ -66,29 +66,29 @@ cat("Creating temporal periods...\n")
 election_date <- ymd("2023-11-22")
 formation_date <- ymd("2024-07-05")
 
-# Period 1: PRE-ELECTION (1 month before election)
-# October 22, 2023 - November 21, 2023
-pre_start <- election_date - months(1)
+# Period 1: PRE-ELECTION (3 months before election)
+# August 22, 2023 - November 21, 2023
+pre_start <- election_date - months(3)
 pre_end <- election_date - days(1)
 
 # Filter data using base R
 data_pre <- voting_data_2023[voting_data_2023$date >= pre_start & voting_data_2023$date <= pre_end, ]
 
-cat("PRE-ELECTION (Oct 22, 2023 - Nov 21, 2023):\n")
+cat("PRE-ELECTION (Aug 22, 2023 - Nov 21, 2023):\n")
 cat(sprintf("  Votes: %d\n", nrow(data_pre)))
 cat(sprintf("  Motions: %d\n", length(unique(data_pre$Besluit_Id))))
 cat(sprintf("  Parties: %d\n", length(unique(data_pre$ActorFractie))))
 cat(sprintf("  Date range: %s to %s\n\n", min(data_pre$date), max(data_pre$date)))
 
-# Period 2: POST-FORMATION (1 month after cabinet formation)
-# July 5, 2024 - August 4, 2024
+# Period 2: POST-FORMATION (3 months after cabinet formation)
+# July 5, 2024 - October 4, 2024
 post_start <- formation_date
-post_end <- formation_date + months(1)
+post_end <- formation_date + months(3)
 
 # Filter data using base R
 data_post <- voting_data_2024[voting_data_2024$date >= post_start & voting_data_2024$date <= post_end, ]
 
-cat("POST-FORMATION (Jul 5, 2024 - Aug 4, 2024):\n")
+cat("POST-FORMATION (Jul 5, 2024 - Oct 4, 2024):\n")
 cat(sprintf("  Votes: %d\n", nrow(data_post)))
 cat(sprintf("  Motions: %d\n", length(unique(data_post$Besluit_Id))))
 cat(sprintf("  Parties: %d\n", length(unique(data_post$ActorFractie))))
@@ -338,7 +338,7 @@ party_colors <- c("Left" = "#E74C3C",      # Red for left-wing parties
 # 1. SIDE-BY-SIDE NETWORK COMPARISON (2 NETWORKS)
 # ============================================================================
 
-pdf("results/visualizations/network_comparison_one_month_pre_vs_post_formation.pdf", width = 16, height = 8)
+pdf("results/visualizations/network_comparison_three_month_pre_vs_post_formation.pdf", width = 16, height = 8)
 par(mfrow = c(1, 2), mar = c(2, 2, 4, 2))
 
 # Common layout for comparison
@@ -386,7 +386,7 @@ plot(g_pre,
      vertex.label.color = "black",
      vertex.label.family = "sans",
      vertex.frame.color = "white",
-     main = "PRE-ELECTION (1 MONTH)\n(Oct 22, 2023 - Nov 21, 2023)")
+     main = "PRE-ELECTION (3 MONTHS)\n(Aug 22, 2023 - Nov 21, 2023)")
 
 # POST-FORMATION network
 V(g_post)$color <- party_colors[V(g_post)$party_type]
@@ -416,7 +416,7 @@ plot(g_post,
      vertex.label.color = "black",
      vertex.label.family = "sans",
      vertex.frame.color = "white",
-     main = "POST-FORMATION (1 MONTH)\n(Jul 5, 2024 - Aug 4, 2024)")
+     main = "POST-FORMATION (3 MONTHS)\n(Jul 5, 2024 - Oct 4, 2024)")
 
 dev.off()
 
@@ -424,14 +424,14 @@ dev.off()
 # 2. DETAILED ANALYSIS
 # ============================================================================
 
-pdf("results/visualizations/detailed_one_month_pre_vs_post_formation_analysis.pdf", width = 16, height = 12)
+pdf("results/visualizations/detailed_three_month_pre_vs_post_formation_analysis.pdf", width = 16, height = 12)
 par(mfrow = c(2, 3), mar = c(4, 4, 3, 2))
 
 # Degree distributions
 hist(degree(g_pre), breaks = 20, col = "#E74C3C", border = "white",
-     main = "Degree Distribution - Pre-Election (1 Month)", xlab = "Degree", ylab = "Frequency")
+     main = "Degree Distribution - Pre-Election (3 Months)", xlab = "Degree", ylab = "Frequency")
 hist(degree(g_post), breaks = 20, col = "#3498DB", border = "white",
-     main = "Degree Distribution - Post-Formation (1 Month)", xlab = "Degree", ylab = "Frequency")
+     main = "Degree Distribution - Post-Formation (3 Months)", xlab = "Degree", ylab = "Frequency")
 
 # Community detection
 if(ecount(g_pre) > 0) {
@@ -472,7 +472,7 @@ dev.off()
 # 3. CHANGE ANALYSIS VISUALIZATION
 # ============================================================================
 
-pdf("results/visualizations/network_changes_one_month_pre_vs_post_formation.pdf", width = 16, height = 10)
+pdf("results/visualizations/network_changes_three_month_pre_vs_post_formation.pdf", width = 16, height = 10)
 par(mfrow = c(2, 2), mar = c(8, 4, 3, 2))
 
 # Network metrics comparison
@@ -483,7 +483,7 @@ metrics_matrix <- as.matrix(metrics_data[, -1])
 rownames(metrics_matrix) <- metrics_data$Metric
 
 barplot(t(metrics_matrix), beside = TRUE, col = c("#E74C3C", "#3498DB"),
-        main = "Network Metrics Comparison (1 Month Periods)",
+        main = "Network Metrics Comparison (3 Month Periods)",
         ylab = "Value", las = 2,
         legend.text = c("Pre-Election", "Post-Formation"),
         args.legend = list(x = "topright"))
@@ -525,22 +525,22 @@ cat("\nExporting network data...\n")
 
 # Export edge lists
 write.csv(igraph::as_data_frame(g_pre, "edges"), 
-          "results/edge_lists/edges_one_month_pre_election.csv", row.names = FALSE)
+          "results/edge_lists/edges_three_month_pre_election.csv", row.names = FALSE)
 write.csv(igraph::as_data_frame(g_post, "edges"), 
-          "results/edge_lists/edges_one_month_post_formation.csv", row.names = FALSE)
+          "results/edge_lists/edges_three_month_post_formation.csv", row.names = FALSE)
 
 # Export comparison statistics
-write.csv(comparison_df, "results/statistics/one_month_pre_vs_post_formation_comparison.csv", row.names = FALSE)
+write.csv(comparison_df, "results/statistics/three_month_pre_vs_post_formation_comparison.csv", row.names = FALSE)
 
 cat("\n===============================================================================\n")
 cat("ANALYSIS COMPLETE!\n")
 cat("===============================================================================\n")
 cat("Generated files:\n")
-cat("  1. network_comparison_one_month_pre_vs_post_formation.pdf - Side-by-side comparison\n")
-cat("  2. detailed_one_month_pre_vs_post_formation_analysis.pdf - Detailed network analysis\n")
-cat("  3. network_changes_one_month_pre_vs_post_formation.pdf - Change metrics visualization\n")
-cat("  4. edges_one_month_pre_election.csv - Edge list for pre-election period\n")
-cat("  5. edges_one_month_post_formation.csv - Edge list for post-formation period\n")
-cat("  6. one_month_pre_vs_post_formation_comparison.csv - Statistical comparison\n")
+cat("  1. network_comparison_three_month_pre_vs_post_formation.pdf - Side-by-side comparison\n")
+cat("  2. detailed_three_month_pre_vs_post_formation_analysis.pdf - Detailed network analysis\n")
+cat("  3. network_changes_three_month_pre_vs_post_formation.pdf - Change metrics visualization\n")
+cat("  4. edges_three_month_pre_election.csv - Edge list for pre-election period\n")
+cat("  5. edges_three_month_post_formation.csv - Edge list for post-formation period\n")
+cat("  6. three_month_pre_vs_post_formation_comparison.csv - Statistical comparison\n")
 cat("===============================================================================\n")
 

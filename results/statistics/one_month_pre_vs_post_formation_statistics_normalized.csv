@@ -1,3 +1,0 @@
-"Period","Nodes","Edges","Density","Components","Mean_Degree","Mean_Z_Score","Median_Z_Score","SD_Z_Score","Strong_Ties_z_gt_1","Very_Strong_Ties_z_gt_2"
-"Pre-Election (1 month)",21,203,0.966666666666667,1,19.3333333333333,-2.66891052225161e-16,0.191844059109652,1.00123685885247,22,0
-"Post-Formation (1 month)",15,58,0.552380952380952,2,7.73333333333333,-7.65671051465625e-18,0,1.00437638852402,4,1

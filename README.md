@@ -24,17 +24,14 @@ This repository contains a comprehensive social network analysis of co-voting pa
 ├── scripts/                       # R analysis scripts
 │   ├── fetch_voting_data.R        # Fetch data from Tweede Kamer API
 │   │
-│   ├── three_period_network_analysis.R           # 3-period comparison (raw)
-│   ├── three_period_network_analysis_normalized.R # 3-period (z-score)
-│   │
-│   ├── two_period_network_analysis.R           # 1 year before/after election (raw)
-│   ├── two_period_network_analysis_normalized.R # 1 year before/after election (z-score)
-│   │
-│   ├── pre_election_vs_post_formation_analysis.R # 1 year: election vs formation (raw)
-│   ├── pre_election_vs_post_formation_analysis_normalized.R # (z-score)
-│   │
 │   ├── one_month_pre_election_vs_post_formation.R # 1 month comparison (raw)
 │   ├── one_month_pre_election_vs_post_formation_normalized.R # (z-score)
+│   │
+│   ├── three_month_pre_election_vs_post_formation.R # 3 month comparison (raw)
+│   ├── three_month_pre_election_vs_post_formation_normalized.R # (z-score)
+│   │
+│   ├── pre_election_vs_post_formation_analysis.R # 1 year comparison (raw)
+│   ├── pre_election_vs_post_formation_analysis_normalized.R # (z-score)
 │   │
 │   ├── analyze_components.R       # Component analysis
 │   ├── generate_network_statistics.R # Comprehensive statistics
@@ -54,10 +51,9 @@ This repository contains a comprehensive social network analysis of co-voting pa
 
 | Analysis | Time Periods | Use Case |
 |----------|-------------|----------|
-| **3-Period** | Q1+Q2 2023, Q3+Q4 2023, Q3+Q4 2024 | Full electoral cycle view |
-| **2-Period (Election)** | 1 year before vs 1 year after election | Election impact |
-| **2-Period (Formation)** | 1 year before election vs 1 year after formation | Government formation impact |
-| **1-Month Snapshot** | 1 month before election vs 1 month after formation | Short-term changes |
+| **1-Month Snapshot** | 1 month before election vs 1 month after formation | Short-term transition effects |
+| **3-Month Comparison** | 3 months before election vs 3 months after formation | Medium-term patterns (recommended) |
+| **1-Year Comparison** | 1 year before election vs 1 year after formation | Long-term structural changes |
 
 ### Network Types
 
@@ -97,32 +93,12 @@ This fetches voting data via the Open Data Portal API and saves:
 
 ### 3. Run Network Analysis
 
-**Three-Period Analysis (Quarters):**
+**Run All Analyses at Once:**
 ```bash
-# Raw weights
-Rscript scripts/three_period_network_analysis.R
-
-# Z-score normalized (recommended for RQ2)
-Rscript scripts/three_period_network_analysis_normalized.R
+./run_all_analyses.sh
 ```
 
-**Two-Period Analysis (1 year before vs after election):**
-```bash
-# Raw weights
-Rscript scripts/two_period_network_analysis.R
-
-# Z-score normalized
-Rscript scripts/two_period_network_analysis_normalized.R
-```
-
-**Pre-Election vs Post-Formation Analysis (1 year):**
-```bash
-# Raw weights
-Rscript scripts/pre_election_vs_post_formation_analysis.R
-
-# Z-score normalized (recommended for Study 2)
-Rscript scripts/pre_election_vs_post_formation_analysis_normalized.R
-```
+**Or run individual analyses:**
 
 **One-Month Snapshot Analysis:**
 ```bash
@@ -131,6 +107,24 @@ Rscript scripts/one_month_pre_election_vs_post_formation.R
 
 # Z-score normalized
 Rscript scripts/one_month_pre_election_vs_post_formation_normalized.R
+```
+
+**Three-Month Comparison (Recommended):**
+```bash
+# Raw weights
+Rscript scripts/three_month_pre_election_vs_post_formation.R
+
+# Z-score normalized (recommended for Study 2)
+Rscript scripts/three_month_pre_election_vs_post_formation_normalized.R
+```
+
+**One-Year Comparison:**
+```bash
+# Raw weights
+Rscript scripts/pre_election_vs_post_formation_analysis.R
+
+# Z-score normalized
+Rscript scripts/pre_election_vs_post_formation_analysis_normalized.R
 ```
 
 **Additional Analyses:**
@@ -157,21 +151,23 @@ Rscript scripts/add_ideology_attributes.R
 
 | File | Content |
 |------|---------|
-| `network_comparison_three_periods.pdf` | Raw weight networks (3 periods) |
-| `network_comparison_normalized.pdf` ⭐ | Z-score networks (3 periods) |
-| `network_comparison_pre_vs_post_formation.pdf` | 1-year comparison (election vs formation) |
-| `network_comparison_one_month_pre_vs_post_formation.pdf` | 1-month snapshot comparison |
-| `network_comparison_one_month_pre_vs_post_formation_normalized.pdf` | 1-month z-score comparison |
+| `network_comparison_one_month_pre_vs_post_formation.pdf` | 1-month snapshot (raw) |
+| `network_comparison_one_month_pre_vs_post_formation_normalized.pdf` | 1-month snapshot (z-score) |
+| `network_comparison_three_month_pre_vs_post_formation.pdf` | 3-month comparison (raw) ⭐ |
+| `network_comparison_three_month_pre_vs_post_formation_normalized.pdf` | 3-month comparison (z-score) ⭐ |
+| `network_comparison_pre_vs_post_formation.pdf` | 1-year comparison (raw) |
+| `network_comparison_normalized_pre_vs_post_formation.pdf` | 1-year comparison (z-score) |
 | `vote_unanimity_summary.pdf` | Vote balance validation |
 
 ### Key Statistics
 
 | File | Content |
 |------|---------|
-| `comprehensive_network_statistics.csv` | All network metrics across periods |
+| `one_month_pre_vs_post_formation_comparison.csv` | 1-month comparison stats |
+| `three_month_pre_vs_post_formation_comparison.csv` | 3-month comparison stats ⭐ |
+| `pre_vs_post_formation_comparison.csv` | 1-year comparison stats |
+| `normalized_network_comparison_pre_vs_post_formation.csv` | Z-score comparison (1-year) |
 | `vote_unanimity_statistics.csv` | Vote distribution analysis |
-| `pre_vs_post_formation_comparison.csv` | Statistical comparison (1 year) |
-| `one_month_pre_vs_post_formation_comparison.csv` | Statistical comparison (1 month) |
 
 ---
 
@@ -197,24 +193,27 @@ Rscript scripts/add_ideology_attributes.R
 
 ## Temporal Periods
 
-### Three-Period Analysis
-| Period | Timeframe | Event |
-|--------|-----------|-------|
-| **Far from Election** | Q1+Q2 2023 (Jan 20 – Jun 29, 2023) | Normal operations (Rutte IV) |
-| **Close to Election** | Q3+Q4 2023 (Jul 5 – Nov 13, 2023) | **Election: Nov 22, 2023** |
-| **Post Formation** | Q3+Q4 2024 (Jul 5 – Dec 20, 2024) | **New cabinet: July 2, 2024** (Schoof I) |
-
-### Two-Period Analysis (Election)
-- **Pre-Election:** November 22, 2022 - November 21, 2023 (1 year before election)
-- **Post-Election:** November 22, 2023 - November 21, 2024 (1 year after election)
-
-### Two-Period Analysis (Formation)
-- **Pre-Election:** November 22, 2022 - November 21, 2023 (1 year before election)
-- **Post-Formation:** July 5, 2024 - July 4, 2025 (1 year after cabinet formation)
+### Key Political Events
+- **Election Date:** November 22, 2023
+- **Cabinet Formation:** July 5, 2024 (Schoof I)
 
 ### One-Month Snapshot
 - **Pre-Election:** October 22, 2023 - November 21, 2023 (1 month before election)
+  - 588 motions, 12,447 votes, 21 parties
 - **Post-Formation:** July 5, 2024 - August 4, 2024 (1 month after formation)
+  - 27 motions, 269 votes, 15 parties
+
+### Three-Month Comparison (Recommended)
+- **Pre-Election:** August 22, 2023 - November 21, 2023 (3 months before election)
+  - 1,102 motions, 23,850 votes, 22 parties
+- **Post-Formation:** July 5, 2024 - October 4, 2024 (3 months after formation)
+  - 243 motions, 1,599 votes, 15 parties
+
+### One-Year Comparison
+- **Pre-Election:** November 22, 2022 - November 21, 2023 (1 year before election)
+  - 3,309 motions, 69,544 votes, 25 parties
+- **Post-Formation:** July 5, 2024 - July 4, 2025 (1 year after formation)
+  - 5,004 motions, 33,177 votes, 17 parties
 
 ---
 
@@ -229,11 +228,12 @@ Rscript scripts/add_ideology_attributes.R
 ### Filtering
 - Minimum 5 shared votes required for edge creation
 - Duplicate votes removed (one vote per party per motion)
+- **Note:** Raw data contains 2,745 duplicate votes (same party voting multiple times on same motion) which are properly deduplicated
 
-### Visualization
-- **RED nodes** = Left-wing parties (SP, PvdD, GroenLinks, PvdA, etc.)
-- **ORANGE nodes** = Center parties (D66, Volt)
-- **BLUE nodes** = Right-wing parties (VVD, CDA, PVV, FVD, etc.)
+### Visualization (Based on Kieskompas 2023 Data)
+- **RED nodes** = Left-wing parties (BIJ1, PvdD, GroenLinks-PvdA, SP, DENK, ChristenUnie, 50PLUS)
+- **ORANGE nodes** = Center parties (Volt, D66, NSC, BBB)
+- **BLUE nodes** = Right-wing parties (CDA, VVD, SGP, PVV, JA21, FVD, BVNL)
 - **Node size** = Degree centrality (more connections = larger)
 - **Edge thickness** = Cooperation strength
 - **Edge highlighting:** 
@@ -260,12 +260,14 @@ install.packages(c("lubridate", "igraph", "ggplot2"))
 
 ## Key Findings
 
-### Network Changes (1-Year Comparison: Pre-Election vs Post-Formation)
-- **Nodes:** 23 → 15 parties (-34.8%)
-- **Edges:** 253 → 105 (-58.5%)
-- **Density:** 1.000 → 1.000 (both fully connected)
-- **Mean Degree:** 22.0 → 14.0 (-36.4%)
+### Network Changes (3-Month Comparison - Recommended)
+- **Nodes:** 22 → 15 parties (-31.8%)
+- **Edges:** 211 → 105 (-50.2%)
+- **Density:** 0.913 → 1.000 (+9.5%)
+- **Mean Degree:** 19.2 → 14.0 (-27.0%)
 - **Transitivity:** 1.000 → 1.000 (both fully transitive)
+- **Components:** 2 → 1 (network became more integrated)
+- **Agreement Rate:** 54.4% → 61.4% (higher cooperation post-formation)
 
 ### Network Changes (1-Month Snapshot)
 - **Nodes:** 21 → 15 parties (-28.6%)
@@ -273,6 +275,14 @@ install.packages(c("lubridate", "igraph", "ggplot2"))
 - **Density:** 1.000 → 0.581 (-41.9%)
 - **Mean Degree:** 20.0 → 8.1 (-59.3%)
 - **Components:** 1 → 2 (network became fragmented)
+- **Note:** Limited post-formation data (only 27 motions)
+
+### Network Changes (1-Year Comparison)
+- **Nodes:** 25 → 17 parties (-32.0%)
+- **Edges:** 223 → 112 (-49.8%)
+- **Density:** 0.743 → 0.824 (+10.8%)
+- **Mean Degree:** 17.8 → 13.2 (-26.1%)
+- **Components:** 5 → 3 (network became more integrated)
 
 ### Vote Unanimity Validation
 - **Mean Agreement Rate:** 55-56% across all periods

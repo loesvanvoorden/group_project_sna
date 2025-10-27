@@ -216,19 +216,27 @@ create_normalized_network <- function(agreements, all_parties, period_name) {
   V(g)$strength <- strength(g)
   V(g)$betweenness <- betweenness(g, weights = NA)
   
-  # Party categories for coloring (matching original)
+  # Party categories for coloring based on Kieskompas ideology data
   party_names <- V(g)$name
+  # Left: negative values (< -0.2)
+  # Center: close to 0 (-0.2 to 0.2)
+  # Right: positive values (> 0.2)
   V(g)$party_type <- ifelse(
-    party_names %in% c("SP", "PvdD", "BIJ1", "GroenLinks", "PvdA", "DENK", "GroenLinks-PvdA"), "Left",
-    ifelse(party_names %in% c("D66", "Volt"), "Center", "Right")
+    party_names %in% c("BIJ1", "PvdD", "GroenLinks", "PvdA", "GroenLinks-PvdA", "DENK", "SP", "ChristenUnie", "50PLUS"), "Left",
+    ifelse(party_names %in% c("Volt", "D66", "NSC", "BBB"), "Center", "Right")
   )
   
-  # Ideology for layout (matching original)
+  # Ideology for layout (left-right positions based on Kieskompas)
+  # Far left: BIJ1, PvdD, GroenLinks-PvdA, DENK, SP
+  # Center-left: ChristenUnie, 50PLUS, Volt, D66, NSC
+  # Center-right: BBB, PVV, CDA
+  # Right: VVD, SGP
+  # Far right: JA21, FVD, BVNL
   V(g)$ideology <- ifelse(
-    party_names %in% c("SP", "PvdD", "BIJ1"), 1,
-    ifelse(party_names %in% c("GroenLinks", "PvdA", "DENK", "GroenLinks-PvdA"), 2,
-    ifelse(party_names %in% c("D66", "Volt", "Omtzigt"), 3,
-    ifelse(party_names %in% c("VVD", "CDA", "ChristenUnie", "BBB", "NSC"), 4, 5)))
+    party_names %in% c("BIJ1", "PvdD", "GroenLinks", "PvdA", "GroenLinks-PvdA", "DENK", "SP"), 1,
+    ifelse(party_names %in% c("ChristenUnie", "50PLUS", "Volt", "D66", "NSC", "Omtzigt"), 2,
+    ifelse(party_names %in% c("BBB", "PVV", "CDA"), 3,
+    ifelse(party_names %in% c("VVD", "SGP"), 4, 5)))
   )
   
   cat(sprintf("%s Network Created:\n", period_name))
