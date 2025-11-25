@@ -169,28 +169,7 @@ print(sprintf("Pre-election edges: %d", nrow(edgelist_pre)))
 print(sprintf("Post-formation edges: %d", nrow(edgelist_post)))
 ```
 
-## 1.4 Z-Score Normalization
-
-```{r normalize-edgelists}
-# Function to normalize edge weights (z-score)
-normalize_edgelist <- function(edgelist) {
-  if(nrow(edgelist) == 0) return(edgelist)
-  mean_weight <- mean(edgelist$weight)
-  sd_weight <- sd(edgelist$weight)
-  edgelist$weight_normalized <- (edgelist$weight - mean_weight) / sd_weight
-  return(edgelist)
-}
-
-# Normalize edge lists
-edgelist_pre_norm <- normalize_edgelist(edgelist_pre)
-edgelist_post_norm <- normalize_edgelist(edgelist_post)
-
-print("EDGE LISTS NORMALIZED (Z-SCORE)")
-print("===============================")
-print("Normalized edge lists ready for analysis")
-```
-
-## 1.5 Create Fully Connected Networks
+## 1.4 Create Fully Connected Networks
 
 Both Study 1 (QAP) and Study 2 (GERGM) require fully connected networks. We create these networks with all parties from the ideology data, setting zero edge weights to 1e-6 for full connectivity.
 
@@ -198,13 +177,38 @@ Both Study 1 (QAP) and Study 2 (GERGM) require fully connected networks. We crea
 # Use all parties from ideology data for both studies
 all_parties <- sort(ideology_data$party)
 
-# Create networks with normalized weights
-g_pre_norm <- create_graph(edgelist_pre_norm, all_parties, use_normalized = TRUE)
-g_post_norm <- create_graph(edgelist_post_norm, all_parties, use_normalized = TRUE)
+# Function to create graph from edgelist
+create_graph <- function(edgelist, vertices, use_normalized = FALSE) {
+  if(nrow(edgelist) > 0) {
+    edgelist_filtered <- edgelist[edgelist$from %in% vertices & 
+                                   edgelist$to %in% vertices, ]
+    
+    if(nrow(edgelist_filtered) > 0) {
+      if(use_normalized && "weight_normalized" %in% names(edgelist_filtered)) {
+        g <- igraph::graph_from_data_frame(edgelist_filtered[, c("from", "to", "weight_normalized")], 
+                                           directed = FALSE, vertices = vertices)
+        igraph::E(g)$weight <- edgelist_filtered$weight_normalized
+      } else {
+        g <- igraph::graph_from_data_frame(edgelist_filtered[, c("from", "to", "weight")], 
+                                           directed = FALSE, vertices = vertices)
+        igraph::E(g)$weight <- edgelist_filtered$weight
+      }
+    } else {
+      g <- igraph::graph_from_data_frame(data.frame(), directed = FALSE, vertices = vertices)
+    }
+  } else {
+    g <- igraph::graph_from_data_frame(data.frame(), directed = FALSE, vertices = vertices)
+  }
+  return(g)
+}
+
+# Create networks with raw weights
+g_pre <- create_graph(edgelist_pre, all_parties, use_normalized = FALSE)
+g_post <- create_graph(edgelist_post, all_parties, use_normalized = FALSE)
 
 # Generate adjacency matrices
-adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre_norm, attr = "weight", sparse = FALSE)
-adj_matrix_post <- igraph::as_adjacency_matrix(g_post_norm, attr = "weight", sparse = FALSE)
+adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre, attr = "weight", sparse = FALSE)
+adj_matrix_post <- igraph::as_adjacency_matrix(g_post, attr = "weight", sparse = FALSE)
 
 # Set 0 values to 1e-6 to make fully connected (but keep diagonal as 0)
 adj_matrix_pre[adj_matrix_pre == 0] <- 1e-6
@@ -308,50 +312,18 @@ boxplot(list(Pre = agreement_pre, Post = agreement_post),
 ## 2.3 Network Visualizations
 
 ```{r network-visualizations}
-# Function to create graph from edgelist
-create_graph <- function(edgelist, vertices, use_normalized = FALSE) {
-  if(nrow(edgelist) > 0) {
-    edgelist_filtered <- edgelist[edgelist$from %in% vertices & 
-                                   edgelist$to %in% vertices, ]
-    
-    if(nrow(edgelist_filtered) > 0) {
-      if(use_normalized && "weight_normalized" %in% names(edgelist_filtered)) {
-        g <- igraph::graph_from_data_frame(edgelist_filtered[, c("from", "to", "weight_normalized")], 
-                                           directed = FALSE, vertices = vertices)
-        igraph::E(g)$weight <- edgelist_filtered$weight_normalized
-      } else {
-        g <- igraph::graph_from_data_frame(edgelist_filtered[, c("from", "to", "weight")], 
-                                           directed = FALSE, vertices = vertices)
-        igraph::E(g)$weight <- edgelist_filtered$weight
-      }
-    } else {
-      g <- igraph::graph_from_data_frame(data.frame(), directed = FALSE, vertices = vertices)
-    }
-  } else {
-    g <- igraph::graph_from_data_frame(data.frame(), directed = FALSE, vertices = vertices)
-  }
-  return(g)
-}
 
-# Create raw networks for visualization
+# Create networks for visualization
 all_parties <- sort(ideology_data$party)
-g_pre_raw <- create_graph(edgelist_pre, all_parties, use_normalized = FALSE)
-g_post_raw <- create_graph(edgelist_post, all_parties, use_normalized = FALSE)
-
-# Create normalized networks
-g_pre_norm <- create_graph(edgelist_pre_norm, all_parties, use_normalized = TRUE)
-g_post_norm <- create_graph(edgelist_post_norm, all_parties, use_normalized = TRUE)
+g_pre_viz <- create_graph(edgelist_pre, all_parties, use_normalized = FALSE)
+g_post_viz <- create_graph(edgelist_post, all_parties, use_normalized = FALSE)
 
 print("NETWORKS CREATED")
 print("===============")
-print(sprintf("Pre-election (raw): %d nodes, %d edges", 
-              snafun::count_vertices(g_pre_raw), snafun::count_edges(g_pre_raw)))
-print(sprintf("Post-formation (raw): %d nodes, %d edges", 
-              snafun::count_vertices(g_post_raw), snafun::count_edges(g_post_raw)))
-print(sprintf("Pre-election (normalized): %d nodes, %d edges", 
-              snafun::count_vertices(g_pre_norm), snafun::count_edges(g_pre_norm)))
-print(sprintf("Post-formation (normalized): %d nodes, %d edges", 
-              snafun::count_vertices(g_post_norm), snafun::count_edges(g_post_norm)))
+print(sprintf("Pre-election: %d nodes, %d edges", 
+              snafun::count_vertices(g_pre_viz), snafun::count_edges(g_pre_viz)))
+print(sprintf("Post-formation: %d nodes, %d edges", 
+              snafun::count_vertices(g_post_viz), snafun::count_edges(g_post_viz)))
 
 # Add ideology attributes for visualization (matching reference script)
 add_ideology_for_visualization <- function(g, ideology_data) {
@@ -392,23 +364,21 @@ add_ideology_for_visualization <- function(g, ideology_data) {
   return(g)
 }
 
-# Add ideology attributes to all networks for visualization
-g_pre_raw <- add_ideology_for_visualization(g_pre_raw, ideology_data)
-g_post_raw <- add_ideology_for_visualization(g_post_raw, ideology_data)
-g_pre_norm <- add_ideology_for_visualization(g_pre_norm, ideology_data)
-g_post_norm <- add_ideology_for_visualization(g_post_norm, ideology_data)
+# Add ideology attributes to networks for visualization
+g_pre_viz <- add_ideology_for_visualization(g_pre_viz, ideology_data)
+g_post_viz <- add_ideology_for_visualization(g_post_viz, ideology_data)
 
-# Create ideology-based layout (matching reference script exactly)
+# Create ideology-based layout
 party_colors <- c("Left" = "#E74C3C", "Center" = "#F39C12", "Right" = "#3498DB")
 
-set.seed(42)  # Same seed as reference for reproducibility
+set.seed(42)  # Same seed for reproducibility
 layout_coords <- matrix(0, nrow = length(all_parties), ncol = 2)
 for(i in seq_along(all_parties)) {
   party <- all_parties[i]
-  if(party %in% igraph::V(g_pre_norm)$name) {
-    ideology_pos <- igraph::V(g_pre_norm)$ideology[igraph::V(g_pre_norm)$name == party][1]
-  } else if(party %in% igraph::V(g_post_norm)$name) {
-    ideology_pos <- igraph::V(g_post_norm)$ideology[igraph::V(g_post_norm)$name == party][1]
+  if(party %in% igraph::V(g_pre_viz)$name) {
+    ideology_pos <- igraph::V(g_pre_viz)$ideology[igraph::V(g_pre_viz)$name == party][1]
+  } else if(party %in% igraph::V(g_post_viz)$name) {
+    ideology_pos <- igraph::V(g_post_viz)$ideology[igraph::V(g_post_viz)$name == party][1]
   } else {
     ideology_pos <- 3
   }
@@ -416,33 +386,7 @@ for(i in seq_along(all_parties)) {
   layout_coords[i, 2] <- stats::runif(1, -1, 1)
 }
 
-# Visualization function matching reference script
-visualize_network_normalized <- function(g, title, layout_coords, all_parties) {
-  # Color and size nodes (matching reference)
-  igraph::V(g)$color <- party_colors[igraph::V(g)$party_type]
-  igraph::V(g)$size <- pmax(8, sqrt(igraph::degree(g)) * 4)
-  
-  # Edge styling for normalized networks (z-score)
-  if(snafun::count_edges(g) > 0) {
-    # Scale z-scores for visibility (matching reference)
-    igraph::E(g)$width <- pmax(0.3, (igraph::E(g)$weight + 3) / 6 * 3)
-    # Highlight edges with z > 1.0 (above average)
-    igraph::E(g)$color <- ifelse(igraph::E(g)$weight > 1.0, 
-                                 grDevices::rgb(0.3, 0.3, 0.3, 0.8),   # Strong: z > 1
-                                 grDevices::rgb(0.5, 0.5, 0.5, 0.15))  # Weak: z <= 1
-  }
-  
-  # Match layout to party order
-  layout_match <- layout_coords[match(igraph::V(g)$name, all_parties), ]
-  
-  plot(g, layout = layout_match,
-       vertex.label.cex = 0.7,
-       vertex.label.color = "black",
-       vertex.label.family = "sans",
-       vertex.frame.color = "white",
-       main = title)
-}
-
+# Visualization function
 visualize_network_raw <- function(g, title, layout_coords, all_parties) {
   # Color and size nodes (matching reference)
   igraph::V(g)$color <- party_colors[igraph::V(g)$party_type]
@@ -469,68 +413,20 @@ visualize_network_raw <- function(g, title, layout_coords, all_parties) {
        main = title)
 }
 
-# Visualize raw networks
+# Visualize networks
 par(mfrow = c(1, 2), mar = c(2, 2, 4, 2))
-visualize_network_raw(g_pre_raw, "PRE-ELECTION (RAW WEIGHTS)\n(Nov 22, 2022 - Nov 21, 2023)", 
+visualize_network_raw(g_pre_viz, "PRE-ELECTION\n(Nov 22, 2022 - Nov 21, 2023)", 
                       layout_coords, all_parties)
-visualize_network_raw(g_post_raw, "POST-FORMATION (RAW WEIGHTS)\n(Jul 5, 2024 - Jul 4, 2025)", 
+visualize_network_raw(g_post_viz, "POST-FORMATION\n(Jul 5, 2024 - Jul 4, 2025)", 
                       layout_coords, all_parties)
-
-# Visualize normalized networks
-par(mfrow = c(1, 2), mar = c(2, 2, 4, 2))
-visualize_network_normalized(g_pre_norm, "PRE-ELECTION (Z-SCORE NORMALIZED)\n(Nov 22, 2022 - Nov 21, 2023)", 
-                             layout_coords, all_parties)
-visualize_network_normalized(g_post_norm, "POST-FORMATION (Z-SCORE NORMALIZED)\n(Jul 5, 2024 - Jul 4, 2025)", 
-                             layout_coords, all_parties)
 ```
 
-## 2.4 Z-Score Normalization Motivation
+## 2.4 Edge Weight Statistics
 
-```{r zscore-motivation}
-# Calculate statistics to motivate z-score normalization
-calculate_zscore_stats <- function(edgelist_norm, period_name) {
-  if(nrow(edgelist_norm) == 0 || !"weight_normalized" %in% names(edgelist_norm)) {
-    return(list(total_edges = 0, strong_ties = 0, pct_strong = "0.0%", very_strong = 0))
-  }
-  
-  total_edges <- nrow(edgelist_norm)
-  strong_ties <- sum(edgelist_norm$weight_normalized > 1.0, na.rm = TRUE)
-  pct_strong <- round(100 * strong_ties / total_edges, 1)
-  very_strong <- sum(edgelist_norm$weight_normalized > 2.0, na.rm = TRUE)
-  
-  return(list(
-    total_edges = total_edges,
-    strong_ties = strong_ties,
-    pct_strong = paste0(pct_strong, "%"),
-    very_strong = very_strong
-  ))
-}
-
-stats_pre_zscore <- calculate_zscore_stats(edgelist_pre_norm, "Pre-Election")
-stats_post_zscore <- calculate_zscore_stats(edgelist_post_norm, "Post-Formation")
-
-zscore_stats_table <- data.frame(
-  Metric = c("Total Edges", "Strong Ties (z>1)", "% Strong Ties", "Very Strong (z>2)"),
-  Pre_Election = c(
-    as.character(stats_pre_zscore$total_edges),
-    as.character(stats_pre_zscore$strong_ties),
-    stats_pre_zscore$pct_strong,
-    as.character(stats_pre_zscore$very_strong)
-  ),
-  Post_Formation = c(
-    as.character(stats_post_zscore$total_edges),
-    as.character(stats_post_zscore$strong_ties),
-    stats_post_zscore$pct_strong,
-    as.character(stats_post_zscore$very_strong)
-  ),
-  stringsAsFactors = FALSE
-)
-
-print("Z-SCORE NORMALIZATION STATISTICS")
-print("=================================")
-print(knitr::kable(zscore_stats_table, align = 'lrr'))
-
-# Compare raw weights
+```{r edge-weight-stats}
+# Compare raw weights between periods
+print("EDGE WEIGHT STATISTICS")
+print("======================")
 print("")
 print("RAW WEIGHT COMPARISON:")
 print(sprintf("Pre-election: Mean = %.1f, SD = %.1f, Range = [%.0f, %.0f]",
@@ -539,8 +435,6 @@ print(sprintf("Pre-election: Mean = %.1f, SD = %.1f, Range = [%.0f, %.0f]",
 print(sprintf("Post-formation: Mean = %.1f, SD = %.1f, Range = [%.0f, %.0f]",
               mean(edgelist_post$weight), sd(edgelist_post$weight),
               min(edgelist_post$weight), max(edgelist_post$weight)))
-print("")
-print("Z-score normalization enables cross-period comparison by standardizing edge weights.")
 ```
 
 ## 2.5 Co-Sponsorship Exploration
@@ -856,6 +750,9 @@ add_ideology_attributes <- function(g, ideology_data) {
 g_study2_pre <- add_ideology_attributes(g_pre_connected, ideology_data)
 g_study2_post <- add_ideology_attributes(g_post_connected, ideology_data)
 
+# Define party set for Study 2 (uses all parties, same as general analysis)
+all_parties_study2 <- sort(ideology_data$party)
+
 print("STUDY 2: IDEOLOGY ATTRIBUTES ADDED")
 print("===================================")
 print(sprintf("Pre-election: %d nodes, fully connected (%d edges)", 
@@ -1088,6 +985,9 @@ print(sprintf("Number of permutations: %d", qap_result$reps))
 print("")
 print("QAP Test Summary:")
 print(summary(qap_result))
+print("")
+print("QAP Test Plot:")
+plot(qap_result)
 ```
 
 ## 5.5 QAP Results Interpretation
@@ -1155,7 +1055,7 @@ The GERGM will test the following hypotheses:
 
 ## Pre election network 
 
-```{r}
+```{r eval=FALSE}
 
 #### 6.3 Pre-election GERGM specification and estimation ----
 # Assumes:
@@ -1253,7 +1153,7 @@ summary(gergm_pre)
 
 ## Post election network
 
-```{r}
+```{r eval=FALSE}
 
 net_post <- igraph::as_adjacency_matrix(
   g_study2_post,
