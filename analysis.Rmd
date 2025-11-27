@@ -541,9 +541,9 @@ print("Networks ready for GERGM analysis")
 
 QAP (Quadratic Assignment Procedure) is used in Study 1 to test whether the network structure changed significantly between the pre-election and post-formation periods. QAP compares two networks by:
 
-1. Computing a test statistic (e.g., correlation) between the two adjacency matrices
-2. Permuting rows and columns of one matrix to generate a null distribution
-3. Comparing the observed statistic to the null distribution to assess significance
+1.  Computing a test statistic (e.g., correlation) between the two adjacency matrices
+2.  Permuting rows and columns of one matrix to generate a null distribution
+3.  Comparing the observed statistic to the null distribution to assess significance
 
 ## 5.2 Prepare Data for QAP
 
@@ -736,195 +736,96 @@ The GERGM will test the following hypotheses:
 -   **H2.5**: Parties who frequently co-sponsor motions tend to agree more with each other.
     -   *Term*: `edgecov(cosponsor_count)` - uses co-sponsorship count as edge covariate
 
-## Pre election network 
+## Pre election network
 
 ```{r eval=FALSE}
 
-## Post election network
+## pre election network
 #Evaluate current network form
 g_study2_pre_cleaned <- g_study2_pre
 snafun::g_summary(g_study2_pre_cleaned)
 
 #Remove nodes of parties not present in these elections
-nodes_to_remove <- c("GroenLinks", "PvdA")
-g_study2_pre_cleaned <- igraph::delete.vertices(g_study2_pre_cleaned, v=nodes_to_remove)
+nodes_to_remove <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
+
+g_study2_pre_cleaned <- snafun::remove_vertices(g_study2_pre_cleaned,nodes_to_remove)
+
+
+snafun::plot(g_study2_pre_cleaned)
+
 
 #generate edge weights and remove 0 for iqr calculation
-edge_weights <- igraph::E(g_study2_pre_cleaned)$weight
-new_weights <- edge_weights[edge_weights > 1]
+edge_weights_pre <- igraph::E(g_study2_pre_cleaned)$weight
 
 
 #quartiles and IQR of these edges
-qs  <- quantile(new_weights, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
-q1  <- qs[1]
-med <- qs[2]
-q3  <- qs[3]
+qs_pre  <- quantile(edge_weights_pre, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+q1_pre  <- qs_pre[1]
+med_pre <- qs_pre[2]
+q3_pre  <- qs_pre[3]
 ```
+
 ```{r eval=FALSE}
 ###Generate subgraphs based on IQR criteria
 
 #generate subgraph
-g_q3 <- igraph::subgraph.edges(
-  g_study2_pre,
-  eids = igraph::E(g_study2_pre)[igraph::E(g_study2_pre)$weight >= q3[[1]]],   # q1 is computed from w_gt1
+g_q3_pre <- igraph::subgraph.edges(
+  g_study2_pre_cleaned,
+  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= q3_pre[[1]]],   # q3 is computed from w_gt1
   delete.vertices = FALSE                  # keep isolated vertices
 )
 #binarize
-igraph::E(g_q3)$weight <- 1 
+igraph::E(g_q3_pre)$weight <- 1 
 
-snafun::g_summary(g_q3)
-snafun::plot(g_q3)
-```
-```{r}
-# ERGM test
-
-g_study2_pre_cleaned_test <- snafun::to_network(g_study2_pre_cleaned)
-formula_pre <- g_study2_pre_cleaned_test ~
-  edges + gwesp
-
-gergm_pre <- ergm::ergm(
-  formula                        = formula_pre
-)
-
-```
-
-```{r eval=FALSE}
-# Running ERGM Pre-election
-
-## 4. GERGM formula: pre-election network -------------------------------------
-formula_pre <- g_study2_pre ~
-  edges(method = "endogenous") +
-  twostars(alpha = 0.8) +
-  ttriads(alpha = 0.8) +
-  absdiff("left_right") +
-  netcov("cosponsor_mat_pre") +
-  netcov("coalition_mat_pre")
-
-## 5. Estimate pre-election GERGM ---------------------------------------------
-set.seed(1234)
-
-gergm_pre <- ergm::ergm(
-  formula                        = formula_pre,
-  covariate_data                 = node_covariates_pre,
-  network_is_directed            = FALSE,
-  include_diagonal               = FALSE,
-  normalization_type             = "division",
-  distribution_estimator         = "none",
-  number_of_networks_to_simulate = 50000,
-  MCMC_burnin                    = 20000,
-  thin                           = 1 / 10,
-  proposal_variance              = 0.2,
-  target_accept_rate             = 0.25,
-  seed                           = 1234,
-  convergence_tolerance          = 0.01,
-  force_x_theta_updates          = 5,
-  sample_edges_at_a_time         = 0
-)
-
-## 6. Output -------------------------------------------------------------------
-summary(gergm_pre)
-
-# Optional diagnostics:
-# GERGM::Estimate_Plot(gergm_pre)
-# GERGM::GOF(gergm_pre)
-# GERGM::Trace_Plot(gergm_pre)
-
-# Optional save:
-# saveRDS(gergm_pre, file = "results/models/gergm_pre_election.rds")
+snafun::g_summary(g_q3_pre)
+snafun::plot(g_q3_pre)
 ```
 
 ## Post election network
 
 ```{r eval=FALSE}
 
-## Post election network
-
+## post election network
 #Evaluate current network form
 g_study2_post_cleaned <- g_study2_post
 snafun::g_summary(g_study2_post_cleaned)
 
 #Remove nodes of parties not present in these elections
-nodes_to_remove <- c("PvdA", "GroenLinks")
-g_study2_post_cleaned <- igraph::delete.vertices(g_study2_post_cleaned, v=nodes_to_remove)
+nodes_to_remove <- c("GroenLinks","Omtzigt", "PvdA", "BIJ1", "BVNL", '50PLUS')
+
+g_study2_post_cleaned <- snafun::remove_vertices(g_study2_post_cleaned,nodes_to_remove)
+
+
+snafun::plot(g_study2_post_cleaned)
+
 
 #generate edge weights and remove 0 for iqr calculation
-edge_weights <- igraph::E(g_study2_post_cleaned)$weight
-new_weights <- edge_weights[edge_weights > 1]
+edge_weights_post <- igraph::E(g_study2_post_cleaned)$weight
 
 
 #quartiles and IQR of these edges
-qs  <- quantile(new_weights, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
-q1  <- qs[1]
-med <- qs[2]
-q3  <- qs[3]
-
-
+qs_post  <- quantile(edge_weights_post, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+q1_post  <- qs_post[1]
+med_post <- qs_post[2]
+q3_post  <- qs_post[3]
 ```
-
 
 ```{r eval=FALSE}
 ###Generate subgraphs based on IQR criteria
 
 #generate subgraph
-g_q3 <- igraph::subgraph.edges(
-  g_study2_post,
-  eids = igraph::E(g_study2_post)[igraph::E(g_study2_post)$weight >= q3[[1]]],   # q1 is computed from w_gt1
+g_q3_post <- igraph::subgraph.edges(
+  g_study2_post_cleaned,
+  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= q3_post[[1]]],   # q3 is computed from w_gt1
   delete.vertices = FALSE                  # keep isolated vertices
 )
 #binarize
-igraph::E(g_q3)$weight <- 1 
+igraph::E(g_q3_post)$weight <- 1 
 
-snafun::g_summary(g_q3)
-snafun::plot(g_q3)
-
-
-```
+snafun::g_summary(g_q3_post)
+snafun::plot(g_q3_post)
 
 
-
-```{r eval=FALSE}
-
-
-## 4. GERGM formula: post-formation network -----------------------------------
-formula_post <- net_post ~
-  edges(method = "endogenous") +
-  twostars(alpha = 0.8) +
-  ttriads(alpha = 0.8) +
-  absdiff("left_right") +
-  netcov("cosponsor_mat_post") +
-  netcov("coalition_mat_post")
-
-## 5. Estimate post-formation GERGM -------------------------------------------
-set.seed(1234)
-
-gergm_post <- GERGM::gergm(
-  formula                        = formula_post,
-  covariate_data                 = node_covariates_post,
-  network_is_directed            = FALSE,
-  include_diagonal               = FALSE,
-  normalization_type             = "division",
-  distribution_estimator         = "none",
-  number_of_networks_to_simulate = 50000,
-  MCMC_burnin                    = 20000,
-  thin                           = 1 / 10,
-  proposal_variance              = 0.2,
-  target_accept_rate             = 0.25,
-  seed                           = 1234,
-  convergence_tolerance          = 0.01,
-  force_x_theta_updates          = 5,
-  sample_edges_at_a_time         = 0
-)
-
-## 6. Output -------------------------------------------------------------------
-summary(gergm_post)
-
-# Optional diagnostics:
-# GERGM::Estimate_Plot(gergm_post)
-# GERGM::GOF(gergm_post)
-# GERGM::Trace_Plot(gergm_post)
-
-# Optional save:
-# saveRDS(gergm_post, file = "results/models/gergm_post_formation.rds")
 ```
 
 # 7. Summary
