@@ -765,6 +765,43 @@ med_pre <- qs_pre[2]
 q3_pre  <- qs_pre[3]
 ```
 
+#### Q1
+
+```{r}
+
+###Generate subgraphs based on IQR criteria
+
+#generate subgraph
+g_q1_pre <- igraph::subgraph.edges(
+  g_study2_pre_cleaned,
+  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= q1_pre[[1]]],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_q1_pre)$weight <- 1 
+snafun::g_summary(g_q1_pre)
+snafun::plot(g_q1_pre)
+```
+
+#### Median
+
+```{r}
+###Generate subgraphs based on IQR criteria
+
+#generate subgraph
+g_med_pre <- igraph::subgraph.edges(
+  g_study2_pre_cleaned,
+  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= med_pre[[1]]],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_pre)$weight <- 1 
+snafun::g_summary(g_med_pre)
+snafun::plot(g_med_pre)
+```
+
+#### Q3
+
 ```{r eval=FALSE}
 ###Generate subgraphs based on IQR criteria
 
@@ -776,7 +813,6 @@ g_q3_pre <- igraph::subgraph.edges(
 )
 #binarize
 igraph::E(g_q3_pre)$weight <- 1 
-
 snafun::g_summary(g_q3_pre)
 snafun::plot(g_q3_pre)
 ```
@@ -809,6 +845,43 @@ q1_post  <- qs_post[1]
 med_post <- qs_post[2]
 q3_post  <- qs_post[3]
 ```
+
+#### Q1
+
+```{r}
+
+###Generate subgraphs based on IQR criteria
+
+#generate subgraph
+g_q1_post <- igraph::subgraph.edges(
+  g_study2_post_cleaned,
+  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= q1_post[[1]]],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_q1_post)$weight <- 1 
+snafun::g_summary(g_q1_post)
+snafun::plot(g_q1_post)
+```
+
+#### Med
+
+```{r}
+###Generate subgraphs based on IQR criteria
+
+#generate subgraph
+g_med_post <- igraph::subgraph.edges(
+  g_study2_post_cleaned,
+  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= med_post[[1]]],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_post)$weight <- 1 
+snafun::g_summary(g_med_post)
+snafun::plot(g_med_post)
+```
+
+#### Q3
 
 ```{r eval=FALSE}
 ###Generate subgraphs based on IQR criteria
