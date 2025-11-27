@@ -474,6 +474,7 @@ add_edge_attribute <- function(g_voting, edgelist_attribute, attr_name) {
     sep = "_"
   )
   
+
   # Create canonical party pair names for attribute edges
   if(nrow(edgelist_attribute) > 0) {
     edgelist_attribute$party_pair <- paste(
@@ -815,6 +816,90 @@ g_q3_pre <- igraph::subgraph.edges(
 igraph::E(g_q3_pre)$weight <- 1 
 snafun::g_summary(g_q3_pre)
 snafun::plot(g_q3_pre)
+
+dist_q3_pre <- snafun::g_degree_distribution(g_med_pre)
+
+vals <- as.numeric(dist_q3_pre[1, ])
+barplot(
+  vals,
+  names.arg = colnames(dist_q3_pre),              # or 1:ncol(M)
+  xlab = "Index",
+  ylab = "Value"
+)
+```
+
+#### Create networks between Med and Q3
+
+```{r}
+
+#create window increments
+diff_pre <- q3_pre[[1]] - med_pre[[1]]
+incr_pre = diff_pre / 4
+
+#---------------------------------------------------
+
+#Generate graph 1
+g_med_pre_v1 <- igraph::subgraph.edges(
+  g_study2_pre_cleaned,
+  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= (med_pre[[1]]+ incr_pre*1)],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_pre_v1)$weight <- 1 
+
+#----------------------------------------------------
+
+#Generate graph 2
+g_med_pre_v2 <- igraph::subgraph.edges(
+  g_study2_pre_cleaned,
+  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= (med_pre[[1]] + incr_pre*2)],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_pre_v2)$weight <- 1 
+
+#------------------------------------------------------
+
+#Generate graph 3
+g_med_pre_v3 <- igraph::subgraph.edges(
+  g_study2_pre_cleaned,
+  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= (med_pre[[1]] + incr_pre*3)],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_pre_v3)$weight <- 1 
+
+#------------------------------------------------------
+
+#summarize
+snafun::g_summary(g_med_pre_v1)
+snafun::plot(g_med_pre_v1)
+snafun::plot(g_med_pre_v2)
+snafun::plot(g_med_pre_v3)
+
+
+
+```
+
+#### ERGM Running (OPZET VAN WAAR DE ERGMS GETRAIND GAAN WORDEN)
+
+```{r}
+g_q3_pre_net <- snafun::to_network(g_q3_pre)
+
+fit <- ergm::ergm(
+    g_q3_pre_net ~ 
+    edges +
+    edgecov("cosponsor_count") +
+    edgecov("coalition_count"),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
 ```
 
 ## Post election network
@@ -898,6 +983,56 @@ igraph::E(g_q3_post)$weight <- 1
 snafun::g_summary(g_q3_post)
 snafun::plot(g_q3_post)
 
+
+```
+
+#### Create networks between Med and Q3
+
+```{r}
+#create window increments
+diff_post <- q3_post[[1]] - med_post[[1]]
+incr_post = diff_pre / 4
+
+#---------------------------------------------------
+
+#Generate graph 1
+g_med_post_v1 <- igraph::subgraph.edges(
+  g_study2_post_cleaned,
+  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= (med_post[[1]]+ incr_post*1)],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_post_v1)$weight <- 1 
+
+#----------------------------------------------------
+
+#Generate graph 2
+g_med_post_v2 <- igraph::subgraph.edges(
+  g_study2_post_cleaned,
+  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= (med_post[[1]] + incr_post*2)],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_post_v2)$weight <- 1 
+
+#------------------------------------------------------
+
+#Generate graph 3
+g_med_post_v3 <- igraph::subgraph.edges(
+  g_study2_post_cleaned,
+  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= (med_post[[1]] + incr_post*3)],   # q3 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_med_post_v3)$weight <- 1 
+
+#------------------------------------------------------
+
+#summarize
+snafun::g_summary(g_med_post_v1)
+snafun::plot(g_med_post_v1)
+snafun::plot(g_med_post_v2)
+snafun::plot(g_med_post_v3)
 
 ```
 
