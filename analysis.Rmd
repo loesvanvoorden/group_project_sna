@@ -740,60 +740,59 @@ The GERGM will test the following hypotheses:
 
 ```{r eval=FALSE}
 
-#### 6.3 Pre-election GERGM specification and estimation ----
-# Assumes:
-# - g_study2_pre already HAS edge attributes: weight, cosponsor_count, coalition_count
-# - node attribute: left_right
-# - edge covariate edgelists already added earlier in the pipeline
-# - libraries GERGM and igraph loaded
+## Post election network
+#Evaluate current network form
+g_study2_pre_cleaned <- g_study2_pre
+snafun::g_summary(g_study2_pre_cleaned)
+
+#Remove nodes of parties not present in these elections
+nodes_to_remove <- c("GroenLinks", "PvdA")
+g_study2_pre_cleaned <- igraph::delete.vertices(g_study2_pre_cleaned, v=nodes_to_remove)
+
+#generate edge weights and remove 0 for iqr calculation
+edge_weights <- igraph::E(g_study2_pre_cleaned)$weight
+new_weights <- edge_weights[edge_weights > 1]
 
 
+#quartiles and IQR of these edges
+qs  <- quantile(new_weights, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+q1  <- qs[1]
+med <- qs[2]
+q3  <- qs[3]
+```
+```{r eval=FALSE}
+###Generate subgraphs based on IQR criteria
 
-## 1. Valued adjacency matrix (voting agreement, z-score normalized) ----------
-net_pre <- igraph::as_adjacency_matrix(
+#generate subgraph
+g_q3 <- igraph::subgraph.edges(
   g_study2_pre,
-  attr   = "weight",   # weight_normalized
-  sparse = FALSE
+  eids = igraph::E(g_study2_pre)[igraph::E(g_study2_pre)$weight >= q3[[1]]],   # q1 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
+)
+#binarize
+igraph::E(g_q3)$weight <- 1 
+
+snafun::g_summary(g_q3)
+snafun::plot(g_q3)
+```
+```{r}
+# ERGM test
+
+g_study2_pre_cleaned_test <- snafun::to_network(g_study2_pre_cleaned)
+formula_pre <- g_study2_pre_cleaned_test ~
+  edges + gwesp
+
+gergm_pre <- ergm::ergm(
+  formula                        = formula_pre
 )
 
-party_names_pre <- igraph::V(g_study2_pre)$name
-rownames(net_pre) <- party_names_pre
-colnames(net_pre) <- party_names_pre
-diag(net_pre)     <- 0
+```
 
-## 2. Node-level covariates (left–right ideology) -----------------------------
-left_right_pre <- igraph::V(g_study2_pre)$left_right
-
-node_covariates_pre <- data.frame(
-  left_right = left_right_pre,
-  row.names  = party_names_pre,
-  stringsAsFactors = FALSE
-)
-
-## 3. Edge-level covariates as matrices (co-sponsorship, coalition) ----------
-cosponsor_mat_pre <- igraph::as_adjacency_matrix(
-  g_study2_pre,
-  attr   = "cosponsor_count",
-  sparse = FALSE
-)
-
-coalition_mat_pre <- igraph::as_adjacency_matrix(
-  g_study2_pre,
-  attr   = "coalition_count",
-  sparse = FALSE
-)
-
-rownames(cosponsor_mat_pre) <- party_names_pre
-colnames(cosponsor_mat_pre) <- party_names_pre
-
-rownames(coalition_mat_pre) <- party_names_pre
-colnames(coalition_mat_pre) <- party_names_pre
-
-diag(cosponsor_mat_pre)  <- 0
-diag(coalition_mat_pre)  <- 0
+```{r eval=FALSE}
+# Running ERGM Pre-election
 
 ## 4. GERGM formula: pre-election network -------------------------------------
-formula_pre <- net_pre ~
+formula_pre <- g_study2_pre ~
   edges(method = "endogenous") +
   twostars(alpha = 0.8) +
   ttriads(alpha = 0.8) +
@@ -804,7 +803,7 @@ formula_pre <- net_pre ~
 ## 5. Estimate pre-election GERGM ---------------------------------------------
 set.seed(1234)
 
-gergm_pre <- GERGM::gergm(
+gergm_pre <- ergm::ergm(
   formula                        = formula_pre,
   covariate_data                 = node_covariates_pre,
   network_is_directed            = FALSE,
@@ -838,47 +837,53 @@ summary(gergm_pre)
 
 ```{r eval=FALSE}
 
-net_post <- igraph::as_adjacency_matrix(
+## Post election network
+
+#Evaluate current network form
+g_study2_post_cleaned <- g_study2_post
+snafun::g_summary(g_study2_post_cleaned)
+
+#Remove nodes of parties not present in these elections
+nodes_to_remove <- c("PvdA", "GroenLinks")
+g_study2_post_cleaned <- igraph::delete.vertices(g_study2_post_cleaned, v=nodes_to_remove)
+
+#generate edge weights and remove 0 for iqr calculation
+edge_weights <- igraph::E(g_study2_post_cleaned)$weight
+new_weights <- edge_weights[edge_weights > 1]
+
+
+#quartiles and IQR of these edges
+qs  <- quantile(new_weights, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+q1  <- qs[1]
+med <- qs[2]
+q3  <- qs[3]
+
+
+```
+
+
+```{r eval=FALSE}
+###Generate subgraphs based on IQR criteria
+
+#generate subgraph
+g_q3 <- igraph::subgraph.edges(
   g_study2_post,
-  attr   = "weight",   # weight_normalized
-  sparse = FALSE
+  eids = igraph::E(g_study2_post)[igraph::E(g_study2_post)$weight >= q3[[1]]],   # q1 is computed from w_gt1
+  delete.vertices = FALSE                  # keep isolated vertices
 )
+#binarize
+igraph::E(g_q3)$weight <- 1 
 
-party_names_post <- igraph::V(g_study2_post)$name
-rownames(net_post) <- party_names_post
-colnames(net_post) <- party_names_post
-diag(net_post)     <- 0
+snafun::g_summary(g_q3)
+snafun::plot(g_q3)
 
-## 2. Node-level covariates (left–right ideology) -----------------------------
-left_right_post <- igraph::V(g_study2_post)$left_right
 
-node_covariates_post <- data.frame(
-  left_right = left_right_post,
-  row.names  = party_names_post,
-  stringsAsFactors = FALSE
-)
+```
 
-## 3. Edge-level covariates as matrices (co-sponsorship, coalition) ----------
-cosponsor_mat_post <- igraph::as_adjacency_matrix(
-  g_study2_post,
-  attr   = "cosponsor_count",
-  sparse = FALSE
-)
 
-coalition_mat_post <- igraph::as_adjacency_matrix(
-  g_study2_post,
-  attr   = "coalition_count",
-  sparse = FALSE
-)
 
-rownames(cosponsor_mat_post) <- party_names_post
-colnames(cosponsor_mat_post) <- party_names_post
+```{r eval=FALSE}
 
-rownames(coalition_mat_post) <- party_names_post
-colnames(coalition_mat_post) <- party_names_post
-
-diag(cosponsor_mat_post)  <- 0
-diag(coalition_mat_post)  <- 0
 
 ## 4. GERGM formula: post-formation network -----------------------------------
 formula_post <- net_post ~
