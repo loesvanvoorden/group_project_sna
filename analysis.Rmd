@@ -110,7 +110,7 @@ print(sprintf("Post-formation edges: %d", nrow(edgelist_post)))
 
 ## 1.4 Create Fully Connected Networks
 
-Both Study 1 (QAP) and Study 2 (GERGM) require fully connected networks. We create these networks with all parties from the ideology data, setting zero edge weights to 1e-6 for full connectivity.
+Study 1 (QAP) requires fully connected networks, while Study 2 (ERGM) uses binary networks. We create fully connected networks first, then binarize for ERGM analysis.
 
 ```{r fully-connected-networks}
 # Create nodelist from ideology data (like final_ergm.R approach)
@@ -152,7 +152,7 @@ print(sprintf("Pre-election: %d nodes, fully connected (%d edges)",
 print(sprintf("Post-formation: %d nodes, fully connected (%d edges)", 
               nrow(nodelist), snafun::count_edges(g_post_connected)))
 print("All zero edge weights set to 1e-6 for full connectivity")
-print("Networks ready for both Study 1 (QAP) and Study 2 (GERGM)")
+print("Networks ready for Study 1 (QAP); Study 2 (ERGM) will use binary versions")
 
 # Export adjacency matrices
 if(!dir.exists("results/adjacency_matrices")) {
@@ -413,6 +413,159 @@ if(nrow(coalition_edgelist_filtered) > 0) {
 }
 ```
 
+## 2.7 Threshold Analysis for Network Binarization
+
+```{r threshold-analysis}
+print("THRESHOLD ANALYSIS FOR NETWORK BINARIZATION")
+print("===========================================")
+print("")
+
+# Get edge weights from both networks (exclude the 1e-6 fill values)
+weights_pre <- igraph::E(g_pre)$weight[igraph::E(g_pre)$weight > 1e-6]
+weights_post <- igraph::E(g_post)$weight[igraph::E(g_post)$weight > 1e-6]
+
+print("EDGE WEIGHT DISTRIBUTIONS:")
+print("==========================")
+print("Pre-election (original edges only):")
+print(sprintf("  Count: %d edges", length(weights_pre)))
+print(sprintf("  Mean: %.2f", mean(weights_pre)))
+print(sprintf("  Median: %.2f", median(weights_pre)))
+print(sprintf("  SD: %.2f", sd(weights_pre)))
+print(sprintf("  Min: %.0f", min(weights_pre)))
+print(sprintf("  Max: %.0f", max(weights_pre)))
+print("  Quantiles:")
+quantiles_pre <- quantile(weights_pre, c(0.25, 0.5, 0.75, 0.9, 0.95))
+for(i in seq_along(quantiles_pre)) {
+  print(sprintf("    %s: %.1f", names(quantiles_pre)[i], quantiles_pre[i]))
+}
+
+print("")
+print("Post-formation (original edges only):")
+print(sprintf("  Count: %d edges", length(weights_post)))
+print(sprintf("  Mean: %.2f", mean(weights_post)))
+print(sprintf("  Median: %.2f", median(weights_post)))
+print(sprintf("  SD: %.2f", sd(weights_post)))
+print(sprintf("  Min: %.0f", min(weights_post)))
+print(sprintf("  Max: %.0f", max(weights_post)))
+print("  Quantiles:")
+quantiles_post <- quantile(weights_post, c(0.25, 0.5, 0.75, 0.9, 0.95))
+for(i in seq_along(quantiles_post)) {
+  print(sprintf("    %s: %.1f", names(quantiles_post)[i], quantiles_post[i]))
+}
+
+# Calculate potential thresholds
+thresholds <- list(
+  mean_pre = mean(weights_pre),
+  median_pre = median(weights_pre),
+  q75_pre = quantile(weights_pre, 0.75),
+  q90_pre = quantile(weights_pre, 0.90),
+  mean_plus_sd_pre = mean(weights_pre) + sd(weights_pre),
+  mean_post = mean(weights_post),
+  median_post = median(weights_post),
+  q75_post = quantile(weights_post, 0.75),
+  q90_post = quantile(weights_post, 0.90),
+  mean_plus_sd_post = mean(weights_post) + sd(weights_post),
+  overall_mean = mean(c(weights_pre, weights_post)),
+  overall_median = median(c(weights_pre, weights_post))
+)
+
+print("")
+print("POTENTIAL THRESHOLDS:")
+print("=====================")
+for(name in names(thresholds)) {
+  threshold_val <- thresholds[[name]]
+  
+  # Count edges that would remain
+  edges_pre_remain <- sum(weights_pre >= threshold_val)
+  edges_post_remain <- sum(weights_post >= threshold_val)
+  
+  # Percentage of original edges retained
+  pct_pre <- (edges_pre_remain / length(weights_pre)) * 100
+  pct_post <- (edges_post_remain / length(weights_post)) * 100
+  
+  print(sprintf("%s: %.1f", name, threshold_val))
+  print(sprintf("  → Pre: %d/%d edges (%.1f%%)", edges_pre_remain, length(weights_pre), pct_pre))
+  print(sprintf("  → Post: %d/%d edges (%.1f%%)", edges_post_remain, length(weights_post), pct_post))
+}
+
+# Distribution plots
+print("")
+print("EDGE WEIGHT DISTRIBUTIONS (plots):")
+par(mfrow = c(2, 2), mar = c(4, 4, 3, 2))
+
+# Histograms
+hist(weights_pre, breaks = 20, main = "Pre-Election Edge Weights", 
+     xlab = "Weight", col = "#E74C3C", alpha = 0.7)
+abline(v = mean(weights_pre), col = "blue", lwd = 2, lty = 2)
+abline(v = median(weights_pre), col = "darkgreen", lwd = 2, lty = 2)
+legend("topright", c("Mean", "Median"), col = c("blue", "darkgreen"), lty = 2)
+
+hist(weights_post, breaks = 20, main = "Post-Formation Edge Weights", 
+     xlab = "Weight", col = "#3498DB", alpha = 0.7)
+abline(v = mean(weights_post), col = "blue", lwd = 2, lty = 2)
+abline(v = median(weights_post), col = "darkgreen", lwd = 2, lty = 2)
+legend("topright", c("Mean", "Median"), col = c("blue", "darkgreen"), lty = 2)
+
+# Boxplots for comparison
+boxplot(list("Pre-Election" = weights_pre, "Post-Formation" = weights_post),
+        main = "Edge Weight Comparison", ylab = "Weight", 
+        col = c("#E74C3C", "#3498DB"))
+
+# Density comparison
+plot(density(weights_pre), main = "Edge Weight Densities", 
+     xlab = "Weight", ylab = "Density", col = "#E74C3C", lwd = 2)
+lines(density(weights_post), col = "#3498DB", lwd = 2)
+legend("topright", c("Pre-Election", "Post-Formation"), 
+       col = c("#E74C3C", "#3498DB"), lwd = 2)
+
+# Network density analysis at different thresholds
+print("")
+print("NETWORK DENSITY AT DIFFERENT THRESHOLDS:")
+print("========================================")
+
+test_thresholds <- c(
+  quantile(c(weights_pre, weights_post), 0.5),   # Overall median
+  quantile(c(weights_pre, weights_post), 0.75),  # Overall 75th percentile
+  quantile(c(weights_pre, weights_post), 0.9),   # Overall 90th percentile
+  mean(c(weights_pre, weights_post))             # Overall mean
+)
+
+names(test_thresholds) <- c("Overall_Median", "Overall_75th", "Overall_90th", "Overall_Mean")
+
+for(i in seq_along(test_thresholds)) {
+  threshold_name <- names(test_thresholds)[i]
+  threshold_val <- test_thresholds[i]
+  
+  # Create binary adjacency matrices
+  adj_binary_pre <- ifelse(adj_matrix_pre > threshold_val, 1, 0)
+  adj_binary_post <- ifelse(adj_matrix_post > threshold_val, 1, 0)
+  diag(adj_binary_pre) <- 0
+  diag(adj_binary_post) <- 0
+  
+  # Create binary networks
+  g_binary_pre <- igraph::graph_from_adjacency_matrix(adj_binary_pre, mode = "undirected")
+  g_binary_post <- igraph::graph_from_adjacency_matrix(adj_binary_post, mode = "undirected")
+  
+  # Calculate network statistics
+  density_pre <- snafun::g_density(g_binary_pre)
+  density_post <- snafun::g_density(g_binary_post)
+  edges_pre <- snafun::count_edges(g_binary_pre)
+  edges_post <- snafun::count_edges(g_binary_post)
+  
+  print(sprintf("%s (threshold = %.1f):", threshold_name, threshold_val))
+  print(sprintf("  Pre-election:  %d edges, density = %.4f", edges_pre, density_pre))
+  print(sprintf("  Post-formation: %d edges, density = %.4f", edges_post, density_post))
+}
+
+print("")
+print("RECOMMENDED THRESHOLDS:")
+print("=======================")
+print("• Overall_Median: Balanced approach, retains ~50% of strongest connections")
+print("• Overall_75th: Conservative approach, focuses on strongest connections") 
+print("• Overall_Mean: Moderate approach, good balance of edges vs. sparsity")
+print("• Consider network density: aim for 0.1-0.3 for ERGM stability")
+```
+
 ------------------------------------------------------------------------
 
 # 3. Study 1 Preprocessing (QAP)
@@ -437,80 +590,90 @@ print("Networks ready for QAP analysis")
 
 ------------------------------------------------------------------------
 
-# 4. Study 2 Preprocessing (GERGM)
+# 4. Study 2 Preprocessing (ERGM)
 
-## 4.1 Add Ideology Attributes to Fully Connected Networks
+## 4.1 Network Binarization for ERGM
 
-Study 2 uses GERGM (Generalized Exponential Random Graph Model) to model network formation with covariates. We start with the fully connected networks from general preprocessing and add ideology attributes to vertices.
+Study 2 uses ERGM (Exponential Random Graph Model) to model network formation with covariates. ERGM requires binary networks, so we binarize using period-specific 70th percentile thresholds to balance network density with transitivity term identifiability.
 
-```{r study2-networks}
-# Study 2 uses the fully connected networks from general preprocessing
-# Ideology attributes are already in the nodelist, just copy to networks
-g_study2_pre <- g_pre_connected
-g_study2_post <- g_post_connected
+```{r study2-binarization}
+# Calculate period-specific 70th percentile thresholds (balanced for transitivity modeling)
+weights_pre <- igraph::E(g_pre)$weight[igraph::E(g_pre)$weight > 1e-6]
+weights_post <- igraph::E(g_post)$weight[igraph::E(g_post)$weight > 1e-6]
 
-# The left_right attribute is already available from nodelist creation
+threshold_pre <- quantile(weights_pre, 0.70)
+threshold_post <- quantile(weights_post, 0.70)
 
-print("STUDY 2: IDEOLOGY ATTRIBUTES ADDED")
-print("===================================")
-print(sprintf("Pre-election: %d nodes, fully connected (%d edges)", 
-              snafun::count_vertices(g_study2_pre), snafun::count_edges(g_study2_pre)))
-print(sprintf("Post-formation: %d nodes, fully connected (%d edges)", 
-              snafun::count_vertices(g_study2_post), snafun::count_edges(g_study2_post)))
+print("STUDY 2: NETWORK BINARIZATION")
+print("==============================")
+print(sprintf("Pre-election threshold (70th percentile): %.1f", threshold_pre))
+print(sprintf("Post-formation threshold (70th percentile): %.1f", threshold_post))
+
+# Create binary adjacency matrices using period-specific thresholds
+adj_binary_pre <- ifelse(adj_matrix_pre > threshold_pre, 1, 0)
+adj_binary_post <- ifelse(adj_matrix_post > threshold_post, 1, 0)
+diag(adj_binary_pre) <- 0
+diag(adj_binary_post) <- 0
+
+# Create binary igraph networks
+g_study2_pre_binary <- igraph::graph_from_adjacency_matrix(adj_binary_pre, 
+                                                           mode = "undirected")
+g_study2_post_binary <- igraph::graph_from_adjacency_matrix(adj_binary_post, 
+                                                            mode = "undirected")
+
+# Add vertex names from nodelist
+igraph::V(g_study2_pre_binary)$name <- nodelist$name
+igraph::V(g_study2_post_binary)$name <- nodelist$name
+
+# Add ideology attributes from nodelist
+igraph::V(g_study2_pre_binary)$left_right <- nodelist$left_right
+igraph::V(g_study2_post_binary)$left_right <- nodelist$left_right
+
+print("")
+print("BINARY NETWORKS CREATED:")
+print(sprintf("Pre-election: %d nodes, %d edges, density = %.4f", 
+              snafun::count_vertices(g_study2_pre_binary), 
+              snafun::count_edges(g_study2_pre_binary),
+              snafun::g_density(g_study2_pre_binary)))
+print(sprintf("Post-formation: %d nodes, %d edges, density = %.4f", 
+              snafun::count_vertices(g_study2_post_binary), 
+              snafun::count_edges(g_study2_post_binary),
+              snafun::g_density(g_study2_post_binary)))
 print("Left-right ideology attributes added to vertices")
 ```
 
-## 4.2 Add Co-Sponsorship and Coalition Edge Attributes
+## 4.2 Prepare Edge Covariate Matrices for ERGM
 
-```{r study2-edge-attributes}
-# Function to add edge attribute from edgelist
-add_edge_attribute <- function(g_voting, edgelist_attribute, attr_name) {
-  edges_voting <- igraph::as_data_frame(g_voting, what = "edges")
+For ERGM analysis, edge covariates are provided as matrices rather than network attributes. We create matrices from the co-sponsorship and coalition edge lists.
+
+```{r study2-edge-covariates}
+# Function to create edge covariate matrix from edgelist
+create_edge_covariate_matrix <- function(edgelist_attribute, party_names) {
+  # Initialize matrix with zeros
+  n_parties <- length(party_names)
+  covariate_matrix <- matrix(0, nrow = n_parties, ncol = n_parties)
+  rownames(covariate_matrix) <- party_names
+  colnames(covariate_matrix) <- party_names
   
-  # Create canonical party pair names (alphabetical order) for matching
-  edges_voting$party_pair <- paste(
-    pmin(edges_voting$from, edges_voting$to),
-    pmax(edges_voting$from, edges_voting$to),
-    sep = "_"
-  )
-  
-  # Create canonical party pair names for attribute edges
+  # Fill in values from edgelist
   if(nrow(edgelist_attribute) > 0) {
-    edgelist_attribute$party_pair <- paste(
-      pmin(edgelist_attribute$from, edgelist_attribute$to),
-      pmax(edgelist_attribute$from, edgelist_attribute$to),
-      sep = "_"
-    )
-    
-    # Match attribute weights to voting edges
-    attr_lookup <- edgelist_attribute$weight
-    names(attr_lookup) <- edgelist_attribute$party_pair
-    
-    # Add attribute (0 if no relationship)
-    edges_voting[[attr_name]] <- ifelse(
-      edges_voting$party_pair %in% names(attr_lookup),
-      attr_lookup[edges_voting$party_pair],
-      0
-    )
-  } else {
-    edges_voting[[attr_name]] <- 0
-  }
-  
-  # Remove temporary party_pair column
-  edges_voting$party_pair <- NULL
-  
-  # Recreate graph with attribute
-  g_with_attr <- igraph::graph_from_data_frame(edges_voting, directed = FALSE,
-                                                vertices = igraph::V(g_voting)$name)
-  
-  # Copy vertex attributes
-  for(attr in igraph::list.vertex.attributes(g_voting)) {
-    if(attr != "name") {
-      igraph::vertex_attr(g_with_attr, attr) <- igraph::vertex_attr(g_voting, attr)
+    for(i in seq_len(nrow(edgelist_attribute))) {
+      from_party <- edgelist_attribute$from[i]
+      to_party <- edgelist_attribute$to[i]
+      weight <- edgelist_attribute$weight[i]
+      
+      # Add to both directions (undirected)
+      if(from_party %in% party_names && to_party %in% party_names) {
+        covariate_matrix[from_party, to_party] <- weight
+        covariate_matrix[to_party, from_party] <- weight
+      }
     }
   }
   
-  return(g_with_attr)
+  # Ensure diagonal is 0
+  diag(covariate_matrix) <- 0
+  
+  return(covariate_matrix)
 }
 
 # Load pre-generated filtered edge lists for Study 2
@@ -519,18 +682,37 @@ edgelist_cosponsor_post_filtered <- read.csv("results/edge_lists/study2_cosponso
 coalition_edgelist_pre_filtered <- read.csv("results/edge_lists/study2_coalition_filtered.csv", stringsAsFactors = FALSE)
 coalition_edgelist_post_filtered <- read.csv("results/edge_lists/study2_coalition_filtered.csv", stringsAsFactors = FALSE)
 
-# Add edge attributes
-g_study2_pre <- add_edge_attribute(g_study2_pre, edgelist_cosponsor_pre_filtered, "cosponsor_count")
-g_study2_pre <- add_edge_attribute(g_study2_pre, coalition_edgelist_pre_filtered, "coalition_count")
+# Get party names in correct order
+party_names <- igraph::V(g_study2_pre_binary)$name
 
-g_study2_post <- add_edge_attribute(g_study2_post, edgelist_cosponsor_post_filtered, "cosponsor_count")
-g_study2_post <- add_edge_attribute(g_study2_post, coalition_edgelist_post_filtered, "coalition_count")
+# Create edge covariate matrices
+cosponsor_matrix_pre <- create_edge_covariate_matrix(edgelist_cosponsor_pre_filtered, party_names)
+cosponsor_matrix_post <- create_edge_covariate_matrix(edgelist_cosponsor_post_filtered, party_names)
+coalition_matrix_pre <- create_edge_covariate_matrix(coalition_edgelist_pre_filtered, party_names)
+coalition_matrix_post <- create_edge_covariate_matrix(coalition_edgelist_post_filtered, party_names)
 
-print("STUDY 2: EDGE ATTRIBUTES ADDED")
-print("===============================")
-print("Co-sponsorship and coalition counts added as edge attributes")
-print("Networks are already fully connected from general preprocessing")
-print("Networks ready for GERGM analysis")
+print("STUDY 2: EDGE COVARIATE MATRICES CREATED")
+print("=========================================")
+print("Pre-election:")
+print(sprintf("  Co-sponsorship matrix: %d x %d, %d non-zero entries", 
+              nrow(cosponsor_matrix_pre), ncol(cosponsor_matrix_pre),
+              sum(cosponsor_matrix_pre > 0)))
+print(sprintf("  Coalition matrix: %d x %d, %d non-zero entries", 
+              nrow(coalition_matrix_pre), ncol(coalition_matrix_pre),
+              sum(coalition_matrix_pre > 0)))
+print("")
+print("Post-formation:")
+print(sprintf("  Co-sponsorship matrix: %d x %d, %d non-zero entries", 
+              nrow(cosponsor_matrix_post), ncol(cosponsor_matrix_post),
+              sum(cosponsor_matrix_post > 0)))
+print(sprintf("  Coalition matrix: %d x %d, %d non-zero entries", 
+              nrow(coalition_matrix_post), ncol(coalition_matrix_post),
+              sum(coalition_matrix_post > 0)))
+print("")
+print("Networks ready for ERGM analysis with:")
+print("  • Binary adjacency matrices (dependent variables)")
+print("  • Left-right ideology (vertex attribute)")  
+print("  • Co-sponsorship and coalition matrices (edge covariates)")
 ```
 
 ------------------------------------------------------------------------
@@ -715,211 +897,138 @@ print("QAP results saved to results/statistics/qap_results.RData")
 
 ------------------------------------------------------------------------
 
-# 6. GERGM Setup
+# 6. ERGM Setup
 
 ## 6.1 Overview
 
-GERGM (Generalized Exponential Random Graph Model) will be used in Study 2 to model network formation with covariates. GERGM allows us to test hypotheses about which factors influence voting agreement between parties.
+ERGM (Exponential Random Graph Model) will be used in Study 2 to model binary network formation with covariates. ERGM allows us to test hypotheses about which factors influence the presence/absence of strong cooperation ties between parties.
 
 ## 6.2 Hypotheses and Model Terms
 
-The GERGM will test the following hypotheses:
+The ERGM will test the following hypotheses using binary networks (70th percentile threshold):
 
--   **H2.1**: Parties with similar ideologies on the left-right spectrum are more likely to agree on motions.
-    -   *Term*: `absdiff(LeftVSRight)` - measures how differences in ideology impact tie formation
--   **H2.2**: Parties that have often been in a coalition together are more likely to agree on motions.
-    -   *Term*: `edgecov(coalitioncount)` - uses coalition count as edge covariate
--   **H2.3**: Parties are more likely to agree on motions if they share agreement on motions with a third party.
-    -   *Term*: `gwesp` - captures transitivity/triadic closure
--   **H2.4**: Some parties are more likely to agree with many other parties.
-    -   *Term*: `kstar(3)` - captures tendency for some parties to form broader cooperation patterns
--   **H2.5**: Parties who frequently co-sponsor motions tend to agree more with each other.
-    -   *Term*: `edgecov(cosponsor_count)` - uses co-sponsorship count as edge covariate
+-   **H2.1**: Parties with similar ideologies on the left-right spectrum are more likely to have strong cooperation ties.
+    -   *Term*: `absdiff("left_right")` - measures how differences in ideology impact tie formation
+-   **H2.2**: Parties that have often been in a coalition together are more likely to have strong cooperation ties.
+    -   *Term*: `edgecov(coalition_matrix)` - uses coalition count as edge covariate
+-   **H2.3**: Parties are more likely to cooperate if they share cooperation with a third party (transitivity).
+    -   *Term*: `gwesp(0.1, fixed=TRUE)` - captures geometrically weighted edgewise shared partners (very low decay for transitivity testing)
+-   **H2.4**: Some parties are more likely to cooperate with many other parties (degree effects).
+    -   *Term*: `kstar(3)` - captures tendency for some parties to form broader cooperation patterns (3-star configurations)
+-   **H2.5**: Parties who frequently co-sponsor motions tend to have stronger cooperation ties.
+    -   *Term*: `edgecov(cosponsor_matrix)` - uses co-sponsorship count as edge covariate
 
-## Pre election network 
+## 6.3 Pre-Election ERGM Specification and Estimation
 
 ```{r eval=FALSE}
 
-#### 6.3 Pre-election GERGM specification and estimation ----
-# Assumes:
-# - g_study2_pre already HAS edge attributes: weight, cosponsor_count, coalition_count
-# - node attribute: left_right
-# - edge covariate edgelists already added earlier in the pipeline
-# - libraries GERGM and igraph loaded
+# Create results directory if it doesn't exist
+if(!dir.exists("results/models")) {
+  dir.create("results/models", recursive = TRUE)
+}
 
+print("PRE-ELECTION ERGM ESTIMATION")
+print("=============================")
 
-
-## 1. Valued adjacency matrix (voting agreement, z-score normalized) ----------
-net_pre <- igraph::as_adjacency_matrix(
-  g_study2_pre,
-  attr   = "weight",   # weight_normalized
-  sparse = FALSE
+# Convert binary igraph to network object for ergm
+net_pre_binary <- network::as.network(
+  igraph::as_adjacency_matrix(g_study2_pre_binary, sparse = FALSE),
+  directed = FALSE
 )
 
-party_names_pre <- igraph::V(g_study2_pre)$name
-rownames(net_pre) <- party_names_pre
-colnames(net_pre) <- party_names_pre
-diag(net_pre)     <- 0
+# Add vertex attributes
+network::set.vertex.attribute(net_pre_binary, "left_right", 
+                              igraph::V(g_study2_pre_binary)$left_right)
 
-## 2. Node-level covariates (left–right ideology) -----------------------------
-left_right_pre <- igraph::V(g_study2_pre)$left_right
+# Full ERGM model specification (tests all 5 hypotheses)
+formula_pre <- net_pre_binary ~ 
+  edges +                               # Baseline density
+  absdiff("left_right") +              # H2.1: Ideology homophily
+  gwesp(0.1, fixed = TRUE) +           # H2.3: Transitivity 
+  kstar(3) +                           # H2.4: Degree popularity
+  edgecov(cosponsor_matrix_pre) +      # H2.5: Co-sponsorship effects
+  edgecov(coalition_matrix_pre)        # H2.2: Coalition history
 
-node_covariates_pre <- data.frame(
-  left_right = left_right_pre,
-  row.names  = party_names_pre,
-  stringsAsFactors = FALSE
-)
-
-## 3. Edge-level covariates as matrices (co-sponsorship, coalition) ----------
-cosponsor_mat_pre <- igraph::as_adjacency_matrix(
-  g_study2_pre,
-  attr   = "cosponsor_count",
-  sparse = FALSE
-)
-
-coalition_mat_pre <- igraph::as_adjacency_matrix(
-  g_study2_pre,
-  attr   = "coalition_count",
-  sparse = FALSE
-)
-
-rownames(cosponsor_mat_pre) <- party_names_pre
-colnames(cosponsor_mat_pre) <- party_names_pre
-
-rownames(coalition_mat_pre) <- party_names_pre
-colnames(coalition_mat_pre) <- party_names_pre
-
-diag(cosponsor_mat_pre)  <- 0
-diag(coalition_mat_pre)  <- 0
-
-## 4. GERGM formula: pre-election network -------------------------------------
-formula_pre <- net_pre ~
-  edges(method = "endogenous") +
-  twostars(alpha = 0.8) +
-  ttriads(alpha = 0.8) +
-  absdiff("left_right") +
-  netcov("cosponsor_mat_pre") +
-  netcov("coalition_mat_pre")
-
-## 5. Estimate pre-election GERGM ---------------------------------------------
+# Estimate ERGM
 set.seed(1234)
 
-gergm_pre <- GERGM::gergm(
-  formula                        = formula_pre,
-  covariate_data                 = node_covariates_pre,
-  network_is_directed            = FALSE,
-  include_diagonal               = FALSE,
-  normalization_type             = "division",
-  distribution_estimator         = "none",
-  number_of_networks_to_simulate = 50000,
-  MCMC_burnin                    = 20000,
-  thin                           = 1 / 10,
-  proposal_variance              = 0.2,
-  target_accept_rate             = 0.25,
-  seed                           = 1234,
-  convergence_tolerance          = 0.01,
-  force_x_theta_updates          = 5,
-  sample_edges_at_a_time         = 0
+ergm_pre <- ergm::ergm(
+  formula_pre,
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    seed = 1234,
+    MCMC.interval = 1500,
+    MCMC.prop = ~sparse + .triadic
+  )
 )
 
-## 6. Output -------------------------------------------------------------------
-summary(gergm_pre)
+# Results
+print("PRE-ELECTION ERGM RESULTS:")
+print("==========================")
+summary(ergm_pre)
 
-# Optional diagnostics:
-# GERGM::Estimate_Plot(gergm_pre)
-# GERGM::GOF(gergm_pre)
-# GERGM::Trace_Plot(gergm_pre)
+# Goodness of fit
+gof_pre <- ergm::gof(ergm_pre)
+print(gof_pre)
+plot(gof_pre)
 
-# Optional save:
-# saveRDS(gergm_pre, file = "results/models/gergm_pre_election.rds")
+# Save results
+saveRDS(ergm_pre, file = "results/models/ergm_pre_election.rds")
+print("Pre-election ERGM saved to results/models/ergm_pre_election.rds")
 ```
 
-## Post election network
+## 6.4 Post-Formation ERGM Specification and Estimation
 
 ```{r eval=FALSE}
+print("POST-FORMATION ERGM ESTIMATION")
+print("===============================")
 
-net_post <- igraph::as_adjacency_matrix(
-  g_study2_post,
-  attr   = "weight",   # weight_normalized
-  sparse = FALSE
+# Convert binary igraph to network object for ergm
+net_post_binary <- network::as.network(
+  igraph::as_adjacency_matrix(g_study2_post_binary, sparse = FALSE),
+  directed = FALSE
 )
 
-party_names_post <- igraph::V(g_study2_post)$name
-rownames(net_post) <- party_names_post
-colnames(net_post) <- party_names_post
-diag(net_post)     <- 0
+# Add vertex attributes
+network::set.vertex.attribute(net_post_binary, "left_right", 
+                              igraph::V(g_study2_post_binary)$left_right)
 
-## 2. Node-level covariates (left–right ideology) -----------------------------
-left_right_post <- igraph::V(g_study2_post)$left_right
+# Full ERGM model specification (same as pre-election for comparison)
+formula_post <- net_post_binary ~ 
+  edges +                               # Baseline density
+  absdiff("left_right") +              # H2.1: Ideology homophily
+  gwesp(0.1, fixed = TRUE) +           # H2.3: Transitivity
+  kstar(3) +                           # H2.4: Degree popularity
+  edgecov(cosponsor_matrix_post) +     # H2.5: Co-sponsorship effects
+  edgecov(coalition_matrix_post)       # H2.2: Coalition history
 
-node_covariates_post <- data.frame(
-  left_right = left_right_post,
-  row.names  = party_names_post,
-  stringsAsFactors = FALSE
-)
-
-## 3. Edge-level covariates as matrices (co-sponsorship, coalition) ----------
-cosponsor_mat_post <- igraph::as_adjacency_matrix(
-  g_study2_post,
-  attr   = "cosponsor_count",
-  sparse = FALSE
-)
-
-coalition_mat_post <- igraph::as_adjacency_matrix(
-  g_study2_post,
-  attr   = "coalition_count",
-  sparse = FALSE
-)
-
-rownames(cosponsor_mat_post) <- party_names_post
-colnames(cosponsor_mat_post) <- party_names_post
-
-rownames(coalition_mat_post) <- party_names_post
-colnames(coalition_mat_post) <- party_names_post
-
-diag(cosponsor_mat_post)  <- 0
-diag(coalition_mat_post)  <- 0
-
-## 4. GERGM formula: post-formation network -----------------------------------
-formula_post <- net_post ~
-  edges(method = "endogenous") +
-  twostars(alpha = 0.8) +
-  ttriads(alpha = 0.8) +
-  absdiff("left_right") +
-  netcov("cosponsor_mat_post") +
-  netcov("coalition_mat_post")
-
-## 5. Estimate post-formation GERGM -------------------------------------------
+# Estimate ERGM
 set.seed(1234)
-
-gergm_post <- GERGM::gergm(
-  formula                        = formula_post,
-  covariate_data                 = node_covariates_post,
-  network_is_directed            = FALSE,
-  include_diagonal               = FALSE,
-  normalization_type             = "division",
-  distribution_estimator         = "none",
-  number_of_networks_to_simulate = 50000,
-  MCMC_burnin                    = 20000,
-  thin                           = 1 / 10,
-  proposal_variance              = 0.2,
-  target_accept_rate             = 0.25,
-  seed                           = 1234,
-  convergence_tolerance          = 0.01,
-  force_x_theta_updates          = 5,
-  sample_edges_at_a_time         = 0
+ergm_post <- ergm::ergm(
+  formula_post,
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    seed = 1234,
+    MCMC.interval = 1500,
+    MCMC.prop = ~sparse + .triadic
+  )
 )
 
-## 6. Output -------------------------------------------------------------------
-summary(gergm_post)
+# Results  
+print("POST-FORMATION ERGM RESULTS:")
+print("=============================")
+summary(ergm_post)
 
-# Optional diagnostics:
-# GERGM::Estimate_Plot(gergm_post)
-# GERGM::GOF(gergm_post)
-# GERGM::Trace_Plot(gergm_post)
+# Goodness of fit
+gof_post <- ergm::gof(ergm_post)
+print(gof_post)
+plot(gof_post)
 
-# Optional save:
-# saveRDS(gergm_post, file = "results/models/gergm_post_formation.rds")
+# Save results
+saveRDS(ergm_post, file = "results/models/ergm_post_formation.rds")
+print("Post-formation ERGM saved to results/models/ergm_post_formation.rds")
 ```
 
 # 7. Summary
@@ -952,14 +1061,14 @@ print("STUDY 1 (QAP):")
 print("  • Uses fully connected networks from general preprocessing")
 print("  • Ready for QAP correlation test")
 print("")
-print("STUDY 2 (GERGM):")
+print("STUDY 2 (ERGM):")
 print(sprintf("  • Pre-election: %d nodes, fully connected (%d edges)", 
               snafun::count_vertices(g_study2_pre), snafun::count_edges(g_study2_pre)))
 print(sprintf("  • Post-formation: %d nodes, fully connected (%d edges)", 
               snafun::count_vertices(g_study2_post), snafun::count_edges(g_study2_post)))
 print("  • Same node set for comparability between periods")
 print("  • Ideology, co-sponsorship, and coalition attributes added")
-print("  • Ready for GERGM analysis")
+print("  • Ready for ERGM analysis")
 ```
 
 ## 7.2 Files Generated

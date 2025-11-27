@@ -146,53 +146,35 @@ print("  Ideology correlation plot saved to results/visualizations/ideology_corr
 print("  Network comparison plot saved to results/visualizations/network_comparison.pdf")
 print("")
 
-# 4. ADD ATTRIBUTES FOR GERGM ------------------------------------------------
+# 4. NETWORK BINARIZATION FOR ERGM -------------------------------------------
 
-# Ideology attributes are already in the nodelist, just copy to networks
-g_study2_pre <- g_pre_connected
-g_study2_post <- g_post_connected
+# Binarize networks using 70th percentile threshold (captures top 30% cooperation)
+weights_pre <- igraph::E(g_pre_connected)$weight[igraph::E(g_pre_connected)$weight > 1e-6]
+weights_post <- igraph::E(g_post_connected)$weight[igraph::E(g_post_connected)$weight > 1e-6]
 
-# The left_right attribute is already available from nodelist creation
+threshold_pre <- quantile(weights_pre, 0.70)
+threshold_post <- quantile(weights_post, 0.70)
 
-# Add edge attributes (co-sponsorship and coalition)
-add_edge_attribute <- function(g_voting, edgelist_attribute, attr_name) {
-  edges_voting <- igraph::as_data_frame(g_voting, what = "edges")
-  
-  # Initialize all attribute values to 0
-  edges_voting[[attr_name]] <- 0
-  
-  # If there are attributes to add, match them
-  if(nrow(edgelist_attribute) > 0) {
-    # Create canonical pairs for both
-    voting_pairs <- paste(pmin(edges_voting$from, edges_voting$to),
-                         pmax(edges_voting$from, edges_voting$to), sep = "_")
-    attr_pairs <- paste(pmin(edgelist_attribute$from, edgelist_attribute$to),
-                       pmax(edgelist_attribute$from, edgelist_attribute$to), sep = "_")
-    
-    # Match and assign
-    matches <- match(voting_pairs, attr_pairs)
-    edges_voting[[attr_name]][!is.na(matches)] <- edgelist_attribute$weight[matches[!is.na(matches)]]
-  }
-  
-  # Recreate graph and copy vertex attributes
-  g_with_attr <- igraph::graph_from_data_frame(edges_voting, directed = FALSE, vertices = igraph::V(g_voting)$name)
-  for(attr in igraph::list.vertex.attributes(g_voting)) {
-    if(attr != "name") igraph::vertex_attr(g_with_attr, attr) <- igraph::vertex_attr(g_voting, attr)
-  }
-  
-  return(g_with_attr)
-}
+# Create binary networks
+adj_binary_pre <- igraph::as_adjacency_matrix(g_pre_connected, sparse = FALSE)
+adj_binary_post <- igraph::as_adjacency_matrix(g_post_connected, sparse = FALSE)
+adj_binary_pre[adj_binary_pre < threshold_pre] <- 0
+adj_binary_post[adj_binary_post < threshold_post] <- 0
+adj_binary_pre[adj_binary_pre >= threshold_pre] <- 1
+adj_binary_post[adj_binary_post >= threshold_post] <- 1
+diag(adj_binary_pre) <- 0
+diag(adj_binary_post) <- 0
 
-# Add co-sponsorship and coalition edge attributes
-g_study2_pre <- add_edge_attribute(g_study2_pre, edgelist_cosponsor_pre, "cosponsor_count")
-g_study2_pre <- add_edge_attribute(g_study2_pre, coalition_edgelist, "coalition_count")
+# Create binary igraph objects
+g_study2_pre_binary <- igraph::graph_from_adjacency_matrix(adj_binary_pre, mode = "undirected")
+g_study2_post_binary <- igraph::graph_from_adjacency_matrix(adj_binary_post, mode = "undirected")
 
-g_study2_post <- add_edge_attribute(g_study2_post, edgelist_cosponsor_post, "cosponsor_count")
-g_study2_post <- add_edge_attribute(g_study2_post, coalition_edgelist, "coalition_count")
+# Add ideology attributes
+igraph::V(g_study2_pre_binary)$left_right <- nodelist$left_right
+igraph::V(g_study2_post_binary)$left_right <- nodelist$left_right
 
-print("  Ideology attributes added to vertices")
-print("  Co-sponsorship and coalition attributes added to edges")
-print("  Networks ready for GERGM analysis")
+print(sprintf("  Binary networks: Pre(%d edges), Post(%d edges)", 
+              snafun::count_edges(g_study2_pre_binary), snafun::count_edges(g_study2_post_binary)))
 print("")
 
 # 5. QAP ANALYSIS -------------------------------------------------------------
@@ -231,9 +213,82 @@ if(p_value_two_tailed < 0.05) {
   print("  Interpretation: Networks differ significantly (p >= 0.05)")
 }
 
+# Save QAP plot
+pdf("results/visualizations/qap_results.pdf", width = 10, height = 6)
+plot(qap_result)
+dev.off()
+
 save(qap_result, qap_summary, observed_corr, p_value_two_tailed, interpretation, file = "results/statistics/qap_results.RData")
-print("  QAP results saved to results/statistics/qap_results.RData")
-print("")
 
-# 6. GERGM ANALYSIS -----------------------------------------------------------
+# 6. ERGM ANALYSIS ------------------------------------------------------------
 
+# Create edge covariate matrices
+cosponsor_matrix_pre <- matrix(0, nrow = nrow(nodelist), ncol = nrow(nodelist))
+cosponsor_matrix_post <- matrix(0, nrow = nrow(nodelist), ncol = nrow(nodelist))
+coalition_matrix_pre <- matrix(0, nrow = nrow(nodelist), ncol = nrow(nodelist))
+coalition_matrix_post <- matrix(0, nrow = nrow(nodelist), ncol = nrow(nodelist))
+
+rownames(cosponsor_matrix_pre) <- colnames(cosponsor_matrix_pre) <- nodelist$name
+rownames(cosponsor_matrix_post) <- colnames(cosponsor_matrix_post) <- nodelist$name
+rownames(coalition_matrix_pre) <- colnames(coalition_matrix_pre) <- nodelist$name
+rownames(coalition_matrix_post) <- colnames(coalition_matrix_post) <- nodelist$name
+
+# Fill covariate matrices
+for(i in seq_len(nrow(edgelist_cosponsor_pre))) {
+  from <- edgelist_cosponsor_pre$from[i]
+  to <- edgelist_cosponsor_pre$to[i]
+  weight <- edgelist_cosponsor_pre$weight[i]
+  cosponsor_matrix_pre[from, to] <- weight
+  cosponsor_matrix_pre[to, from] <- weight
+}
+
+for(i in seq_len(nrow(edgelist_cosponsor_post))) {
+  from <- edgelist_cosponsor_post$from[i]
+  to <- edgelist_cosponsor_post$to[i]
+  weight <- edgelist_cosponsor_post$weight[i]
+  cosponsor_matrix_post[from, to] <- weight
+  cosponsor_matrix_post[to, from] <- weight
+}
+
+for(i in seq_len(nrow(coalition_edgelist))) {
+  from <- coalition_edgelist$from[i]
+  to <- coalition_edgelist$to[i]
+  weight <- coalition_edgelist$weight[i]
+  coalition_matrix_pre[from, to] <- weight
+  coalition_matrix_pre[to, from] <- weight
+  coalition_matrix_post[from, to] <- weight
+  coalition_matrix_post[to, from] <- weight
+}
+
+# Convert to network objects for ERGM (network library required for vertex attributes)
+
+net_pre_binary <- network::as.network(adj_binary_pre, directed = FALSE)
+net_post_binary <- network::as.network(adj_binary_post, directed = FALSE)
+network::set.vertex.attribute(net_pre_binary, "left_right", nodelist$left_right)
+network::set.vertex.attribute(net_post_binary, "left_right", nodelist$left_right)
+
+# ERGM model specification (tests all 5 hypotheses)
+formula_pre <- net_pre_binary ~ edges + absdiff("left_right") + gwesp(0.1, fixed = TRUE) + 
+               kstar(3) + edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre)
+formula_post <- net_post_binary ~ edges + absdiff("left_right") + gwesp(0.1, fixed = TRUE) + 
+                kstar(3) + edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post)
+
+# Estimate ERGMs
+set.seed(1234)
+ergm_pre <- ergm::ergm(formula_pre, control = ergm::control.ergm(
+  MCMC.burnin = 20000, MCMC.samplesize = 25000, seed = 1234, 
+  MCMC.interval = 1500, MCMC.prop = ~sparse + .triadic))
+
+set.seed(1234)
+ergm_post <- ergm::ergm(formula_post, control = ergm::control.ergm(
+  MCMC.burnin = 20000, MCMC.samplesize = 25000, seed = 1234, 
+  MCMC.interval = 1500, MCMC.prop = ~sparse + .triadic))
+
+# Results
+summary(ergm_pre)
+
+summary(ergm_post)
+
+# Save results
+saveRDS(ergm_pre, "results/models/ergm_pre_election.rds")
+saveRDS(ergm_post, "results/models/ergm_post_formation.rds")
