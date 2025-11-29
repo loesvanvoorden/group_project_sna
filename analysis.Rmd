@@ -121,9 +121,21 @@ nodelist <- data.frame(
   stringsAsFactors = FALSE
 )
 
+
 # Create igraph networks directly (like final_ergm.R)
 g_pre <- igraph::graph_from_data_frame(d = edgelist_pre, vertices = nodelist, directed = FALSE)
 g_post <- igraph::graph_from_data_frame(d = edgelist_post, vertices = nodelist, directed = FALSE)
+
+#Remove nodes of parties not present in these elections
+#nodes_to_remove_pre <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
+#nodes_to_remove_post <- c("GroenLinks","Omtzigt", "PvdA", "BIJ1", "BVNL", '50PLUS')
+#g_pre_cleaned <- snafun::remove_vertices(g_pre,nodes_to_remove)
+#g_post_cleaned <- snafun::remove_vertices(g_post,nodes_to_remove)
+
+#generate edge weights and remove 0 for iqr calculation
+#edge_weights_pre <- igraph::E(g_pre_cleaned)$weight
+#edge_weights_post <- igraph::E(g_post_cleaned)$weight
+
 
 # Generate adjacency matrices
 adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre, attr = "weight", sparse = FALSE)
@@ -716,7 +728,7 @@ print("QAP results saved to results/statistics/qap_results.RData")
 
 ------------------------------------------------------------------------
 
-# 6. GERGM Setup
+# 6. ERGM Setup
 
 ## 6.1 Overview
 
@@ -737,160 +749,215 @@ The GERGM will test the following hypotheses:
 -   **H2.5**: Parties who frequently co-sponsor motions tend to agree more with each other.
     -   *Term*: `edgecov(cosponsor_count)` - uses co-sponsorship count as edge covariate
 
-## Pre election network
+```{r eval=FALSE}
+
+nodelist <- data.frame(
+  name = sort(ideology_data$party),
+  left_right = ideology_data$left_right[match(sort(ideology_data$party), ideology_data$party)],
+  conservative_progressive = ideology_data$conservative_progressive[match(sort(ideology_data$party), ideology_data$party)],
+  stringsAsFactors = FALSE
+)
+
+
+g_pre <- igraph::graph_from_data_frame(d = edgelist_pre, vertices = nodelist, directed = FALSE)
+g_post <- igraph::graph_from_data_frame(d = edgelist_post, vertices = nodelist, directed = FALSE)
+
+snafun::g_summary(g_pre)
+snafun::g_summary(g_post)
+
+
+
+
+```
+
+## Pre election network Prep
 
 ```{r eval=FALSE}
 
-## pre election network
-#Evaluate current network form
+## Create cleaned network
+# Pre
 g_study2_pre_cleaned <- g_study2_pre
 snafun::g_summary(g_study2_pre_cleaned)
-
-#Remove nodes of parties not present in these elections
-nodes_to_remove <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
-
-g_study2_pre_cleaned <- snafun::remove_vertices(g_study2_pre_cleaned,nodes_to_remove)
+# Post
+g_study2_post_cleaned <- g_study2_post
+snafun::g_summary(g_study2_post_cleaned)
 
 
-snafun::plot(g_study2_pre_cleaned)
+##Remove nodes of parties not present in these elections
+# Pre
+pre_nodes_to_remove <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
+g_study2_pre_cleaned <- snafun::remove_vertices(g_study2_pre_cleaned,pre_nodes_to_remove)
+# Post
+post_nodes_to_remove <- c("GroenLinks","Omtzigt", "PvdA", "BIJ1", "BVNL", '50PLUS')
+g_study2_post_cleaned <- snafun::remove_vertices(g_study2_post_cleaned,post_nodes_to_remove)
 
 
-#generate edge weights and remove 0 for iqr calculation
+## Edge weight: motion counts as fractions of total motions
+# Pre
+total_motions_pre  <- length(unique(motion_data_pre$Besluit_Id))
+counted_weights_pre <- igraph::E(g_study2_pre_cleaned)$weight
+igraph::E(g_study2_pre_cleaned)$weight_count <- counted_weights_pre
+igraph::E(g_study2_pre_cleaned)$weight <- counted_weights_pre / total_motions_pre
+snafun::g_summary(g_study2_pre_cleaned)
 edge_weights_pre <- igraph::E(g_study2_pre_cleaned)$weight
+# Post
+total_motions_post  <- length(unique(motion_data_post$Besluit_Id))
+counted_weights_post <- igraph::E(g_study2_post_cleaned)$weight
+igraph::E(g_study2_post_cleaned)$weight_count <- counted_weights_post
+igraph::E(g_study2_post_cleaned)$weight <- counted_weights_post / total_motions_post
+snafun::g_summary(g_study2_post_cleaned)
+edge_weights_post <- igraph::E(g_study2_post_cleaned)$weight
 
 
-#quartiles and IQR of these edges
-qs_pre  <- quantile(edge_weights_pre, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
-q1_pre  <- qs_pre[1]
-med_pre <- qs_pre[2]
-q3_pre  <- qs_pre[3]
+## Cut-off threshold percentages to investigate
+prob <- c(0.25, 0.50, 0.60, 0.68, 0.70, 0.75)
+name <- c("p25","p50","p60","p68", "p70", "p75")
+#Pre
+cutoffs_pre <- quantile(edge_weights_pre, probs = prob, na.rm = TRUE)
+cutoffs_pre <- as.list(cutoffs_pre)
+names(cutoffs_pre) <- name
+# Post
+cutoffs_post <- quantile(edge_weights_post, probs = prob, na.rm = TRUE)
+cutoffs_post <- as.list(cutoffs_post)
+names(cutoffs_post) <- name
+
+
+
+g_pre_list <- list()
+g_post_list <- list()
+dist_pre_list <- list()
+dist_post_list <- list()
+summary_pre_list <- list()
+summary_post_list <- list()
+
 ```
 
-#### Q1
+
+### Loop voor alle pre-thresholds
 
 ```{r}
+for (name in names(cutoffs_pre)){
+  threshold <- cutoffs_pre[[name]]
+  
+  # Subgraph generation
+  graph_temporary <- igraph::subgraph.edges(
+    g_study2_pre_cleaned,
+    eids = igraph::E(g_study2_pre_cleaned)[
+      igraph::E(g_study2_pre_cleaned)$weight >= threshold],
+    delete.vertices = FALSE
+  )
+  
+  # Binarize Subgraph
+  igraph::E(graph_temporary)$weight <- 1
+  
+  cat("Pre-", name)
+  
+  summary_temp <- snafun::g_summary(graph_temporary)
+  summary_pre_list[[name]] <- summary_temp
+  
+  print(summary_temp)
+  
+  snafun::plot(graph_temporary, main = paste("Pre-",name))
+  g_pre_list[[name]] <- graph_temporary
+  
+  # Analyse Subgraph
+  dist_pre <- snafun::g_degree_distribution(graph_temporary)
+  dist_pre_list[[name]] <- dist_pre
+  values <- as.numeric(dist_pre[1, ])
+  barplot(values, names.arg = colnames(dist_pre), xlab="Index", ylab="Value", main = paste("Degree distribution pre-", name))
+}
 
-###Generate subgraphs based on IQR criteria
+for (name in names(g_pre_list)) {
+  new_name <- paste("g", name, "pre", sep="_")
+  assign(new_name, g_pre_list[[name]])
+}
 
-#generate subgraph
-g_q1_pre <- igraph::subgraph.edges(
-  g_study2_pre_cleaned,
-  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= q1_pre[[1]]],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_q1_pre)$weight <- 1 
-snafun::g_summary(g_q1_pre)
-snafun::plot(g_q1_pre)
 ```
-
-#### Median
+#### Loop voor alle post-thresholds
 
 ```{r}
-###Generate subgraphs based on IQR criteria
+for (name in names(cutoffs_post)){
+  threshold <- cutoffs_post[[name]]
+  
+  # Subgraph generation
+  graph_temporary <- igraph::subgraph.edges(
+    g_study2_post_cleaned,
+    eids = igraph::E(g_study2_post_cleaned)[
+      igraph::E(g_study2_post_cleaned)$weight >= threshold],
+    delete.vertices = FALSE
+  )
+  
+  # Binarize Subgraph
+  igraph::E(graph_temporary)$weight <- 1
+  
+  cat("Post-", name)
+  
+  summary_temp <- snafun::g_summary(graph_temporary)
+  summary_post_list[[name]] <- summary_temp
+  
+  print(summary_temp)
+  
+  snafun::plot(graph_temporary, main = paste("Post-",name))
+  g_post_list[[name]] <- graph_temporary
+  
+  # Analyse Subgraph
+  dist_post <- snafun::g_degree_distribution(graph_temporary)
+  dist_post_list[[name]] <- dist_post
+  values <- as.numeric(dist_post[1, ])
+  barplot(values, names.arg = colnames(dist_post), xlab="Index", ylab="Value", main = paste("Degree distribution post-", name))
+}
 
-#generate subgraph
-g_med_pre <- igraph::subgraph.edges(
-  g_study2_pre_cleaned,
-  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= med_pre[[1]]],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_med_pre)$weight <- 1 
-snafun::g_summary(g_med_pre)
-snafun::plot(g_med_pre)
+for (name in names(g_post_list)) {
+  new_name <- paste("g", name, "post", sep="_")
+  assign(new_name, g_post_list[[name]])
+}
+
 ```
 
-#### Q3
-
-```{r eval=FALSE}
-###Generate subgraphs based on IQR criteria
-
-#generate subgraph
-g_q3_pre <- igraph::subgraph.edges(
-  g_study2_pre_cleaned,
-  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= q3_pre[[1]]],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_q3_pre)$weight <- 1 
-snafun::g_summary(g_q3_pre)
-snafun::plot(g_q3_pre)
-
-dist_q3_pre <- snafun::g_degree_distribution(g_med_pre)
-
-vals <- as.numeric(dist_q3_pre[1, ])
-barplot(
-  vals,
-  names.arg = colnames(dist_q3_pre),              # or 1:ncol(M)
-  xlab = "Index",
-  ylab = "Value"
-)
-```
-
-#### Create networks between Med and Q3
+#### ERGM Prep
 
 ```{r}
+## Pre
 
-#create window increments
-diff_pre <- q3_pre[[1]] - med_pre[[1]]
-incr_pre = diff_pre / 4
+thresholded_pre <- g_p68_pre
 
-#---------------------------------------------------
+party_names <- igraph::V(thresholded_pre)$name
+igraph::V(thresholded_pre)$left_right <- nodelist$left_right[
+  match(party_names, nodelist$name)]
+  
+thresholded_pre_net <- snafun::to_network(thresholded_pre)
 
-#Generate graph 1
-g_med_pre_v1 <- igraph::subgraph.edges(
-  g_study2_pre_cleaned,
-  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= (med_pre[[1]]+ incr_pre*1)],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_med_pre_v1)$weight <- 1 
+network::set.vertex.attribute(thresholded_pre_net, "left_right", igraph::V(thresholded_pre)$left_right)
 
-#----------------------------------------------------
+cosponsor_mat  <- as.matrix.network(thresholded_pre_net, attrname = "cosponsor_count")
+coalition_mat  <- as.matrix.network(thresholded_pre_net, attrname = "coalition_count")
 
-#Generate graph 2
-g_med_pre_v2 <- igraph::subgraph.edges(
-  g_study2_pre_cleaned,
-  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= (med_pre[[1]] + incr_pre*2)],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_med_pre_v2)$weight <- 1 
+## Post
 
-#------------------------------------------------------
+thresholded_post <- g_p68_post
 
-#Generate graph 3
-g_med_pre_v3 <- igraph::subgraph.edges(
-  g_study2_pre_cleaned,
-  eids = igraph::E(g_study2_pre_cleaned)[igraph::E(g_study2_pre_cleaned)$weight >= (med_pre[[1]] + incr_pre*3)],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_med_pre_v3)$weight <- 1 
+party_names <- igraph::V(thresholded_post)$name
+igraph::V(thresholded_post)$left_right <- nodelist$left_right[
+  match(party_names, nodelist$name)]
+  
+thresholded_post_net <- snafun::to_network(thresholded_post)
 
-#------------------------------------------------------
+network::set.vertex.attribute(thresholded_post_net, "left_right", igraph::V(thresholded_post)$left_right)
 
-#summarize
-snafun::g_summary(g_med_pre_v1)
-snafun::plot(g_med_pre_v1)
-snafun::plot(g_med_pre_v2)
-snafun::plot(g_med_pre_v3)
-
-
+cosponsor_mat  <- as.matrix.network(thresholded_post_net, attrname = "cosponsor_count")
+coalition_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_count")
 
 ```
 
-#### ERGM Running (OPZET VAN WAAR DE ERGMS GETRAIND GAAN WORDEN)
+#### ERGM Run Pre
 
 ```{r}
-g_q3_pre_net <- snafun::to_network(g_q3_pre)
+# Exogenous ERGMs
 
-fit <- ergm::ergm(
-    g_q3_pre_net ~ 
+Model1 <- ergm::ergm(
+    thresholded_pre_net ~ 
     edges +
-    edgecov("cosponsor_count") +
-    edgecov("coalition_count"),
+    absdiff("left_right"),
   control = ergm::control.ergm(
     MCMC.burnin = 7000,
     MCMC.samplesize = 20000,
@@ -900,141 +967,423 @@ fit <- ergm::ergm(
     parallel.type = "PSOCK"
   )
 )
+
+Model2 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    edgecov(cosponsor_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model3 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model4 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    edgecov(cosponsor_mat) +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model5 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    absdiff("left_right") +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model6 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    edgecov(cosponsor_mat) +
+    absdiff("left_right"),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model7 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    edgecov(cosponsor_mat) +
+    edgecov(coalition_mat) +
+    absdiff("left_right"),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+texreg::screenreg(list(Model1, Model2, Model3, Model4, Model5, Model6, Model7))
+
 ```
 
-## Post election network
-
-```{r eval=FALSE}
-
-## post election network
-#Evaluate current network form
-g_study2_post_cleaned <- g_study2_post
-snafun::g_summary(g_study2_post_cleaned)
-
-#Remove nodes of parties not present in these elections
-nodes_to_remove <- c("GroenLinks","Omtzigt", "PvdA", "BIJ1", "BVNL", '50PLUS')
-
-g_study2_post_cleaned <- snafun::remove_vertices(g_study2_post_cleaned,nodes_to_remove)
 
 
-snafun::plot(g_study2_post_cleaned)
+
+```{r}
+# Structural ERGMs
+
+Model1 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    gwesp(0.1, fixed = TRUE),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
+
+Model2 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    kstar(3),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
 
 
-#generate edge weights and remove 0 for iqr calculation
-edge_weights_post <- igraph::E(g_study2_post_cleaned)$weight
+Model3 <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    #gwdegree(0.1, fixed=TRUE) +
+    kstar(3)+  
+    gwesp(0.1, fixed = TRUE),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
 
+texreg::screenreg(list(Model1, Model2, Model3))
 
-#quartiles and IQR of these edges
-qs_post  <- quantile(edge_weights_post, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
-q1_post  <- qs_post[1]
-med_post <- qs_post[2]
-q3_post  <- qs_post[3]
 ```
 
-#### Q1
 
 ```{r}
 
-###Generate subgraphs based on IQR criteria
+#Final Model
 
-#generate subgraph
-g_q1_post <- igraph::subgraph.edges(
-  g_study2_post_cleaned,
-  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= q1_post[[1]]],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
+FinalModel <- ergm::ergm(
+    thresholded_pre_net ~ 
+    edges +
+    kstar(3) +
+    gwesp(0.1, fixed = TRUE) +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
 )
-#binarize
-igraph::E(g_q1_post)$weight <- 1 
-snafun::g_summary(g_q1_post)
-snafun::plot(g_q1_post)
 ```
 
-#### Med
+
+#### ERGM Interpret Pre
 
 ```{r}
-###Generate subgraphs based on IQR criteria
 
-#generate subgraph
-g_med_post <- igraph::subgraph.edges(
-  g_study2_post_cleaned,
-  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= med_post[[1]]],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_med_post)$weight <- 1 
-snafun::g_summary(g_med_post)
-snafun::plot(g_med_post)
-```
+ergm_analysis <- function(model, prefix) {
 
-#### Q3
+  output_dir <- "results"
+  if (!dir.exists(output_dir)) {dir.create(output_dir)}
+  
+  # Summary
+  summary_file <- file.path(output_dir, paste(prefix, "summary.txt"))
+  summary_content <- capture.output(summary(model))
+  writeLines(summary_content, summary_file)
+  cat("Model summary saved in", summary_file, "\n")
+  
+  # MCMC Diagnostics (plots)
+  mcmc_diag_file <- file.path(output_dir, paste(prefix, "mcmc.pdf"))
+  pdf(mcmc_diag_file)
+  dev.off()
+  cat("MCMC saved in ", mcmc_diag_file, "\n")
+  
+  # GOF (plots)
+  gof_results <- ergm::gof(model)
+  gof_plot_file <- file.path(output_dir, paste(prefix, "gof.pdf"))
+  pdf(gof_plot_file)
+  dev.off()
+  cat("GOF saved in", gof_plot_file, "\n")
 
-```{r eval=FALSE}
-###Generate subgraphs based on IQR criteria
+}
 
-#generate subgraph
-g_q3_post <- igraph::subgraph.edges(
-  g_study2_post_cleaned,
-  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= q3_post[[1]]],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
-)
-#binarize
-igraph::E(g_q3_post)$weight <- 1 
-
-snafun::g_summary(g_q3_post)
-snafun::plot(g_q3_post)
-
+ergm_analysis(FinalModel, "pre-election")
 
 ```
 
-#### Create networks between Med and Q3
+#### ERGM Run Post
 
 ```{r}
-#create window increments
-diff_post <- q3_post[[1]] - med_post[[1]]
-incr_post = diff_pre / 4
+# Exogenous ERGMs
 
-#---------------------------------------------------
-
-#Generate graph 1
-g_med_post_v1 <- igraph::subgraph.edges(
-  g_study2_post_cleaned,
-  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= (med_post[[1]]+ incr_post*1)],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
+Model1 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    absdiff("left_right"),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
 )
-#binarize
-igraph::E(g_med_post_v1)$weight <- 1 
 
-#----------------------------------------------------
-
-#Generate graph 2
-g_med_post_v2 <- igraph::subgraph.edges(
-  g_study2_post_cleaned,
-  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= (med_post[[1]] + incr_post*2)],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
+Model2 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    edgecov(cosponsor_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
 )
-#binarize
-igraph::E(g_med_post_v2)$weight <- 1 
 
-#------------------------------------------------------
-
-#Generate graph 3
-g_med_post_v3 <- igraph::subgraph.edges(
-  g_study2_post_cleaned,
-  eids = igraph::E(g_study2_post_cleaned)[igraph::E(g_study2_post_cleaned)$weight >= (med_post[[1]] + incr_post*3)],   # q3 is computed from w_gt1
-  delete.vertices = FALSE                  # keep isolated vertices
+Model3 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
 )
-#binarize
-igraph::E(g_med_post_v3)$weight <- 1 
 
-#------------------------------------------------------
+Model4 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    edgecov(cosponsor_mat) +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
 
-#summarize
-snafun::g_summary(g_med_post_v1)
-snafun::plot(g_med_post_v1)
-snafun::plot(g_med_post_v2)
-snafun::plot(g_med_post_v3)
+Model5 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    absdiff("left_right") +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model6 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    edgecov(cosponsor_mat) +
+    absdiff("left_right"),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+Model7 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    edgecov(cosponsor_mat) +
+    edgecov(coalition_mat) +
+    absdiff("left_right"),
+  control = ergm::control.ergm(
+    MCMC.burnin = 7000,
+    MCMC.samplesize = 20000,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK"
+  )
+)
+
+texreg::screenreg(list(Model1, Model2, Model3, Model4, Model5, Model6, Model7))
 
 ```
+
+```{r}
+# Structural ERGMs
+
+Model1 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    gwesp(0.1, fixed = TRUE),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
+
+Model2 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    kstar(3),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
+
+
+Model3 <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    #gwdegree(0.1, fixed=TRUE) +
+    kstar(3)+  
+    gwesp(0.1, fixed = TRUE),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
+
+texreg::screenreg(list(Model1, Model2, Model3))
+
+```
+
+```{r}
+
+#Final Model
+
+FinalModel <- ergm::ergm(
+    thresholded_post_net ~ 
+    edges +
+    kstar(3) +
+    gwesp(0.1, fixed = TRUE) +
+    edgecov(coalition_mat),
+  control = ergm::control.ergm(
+    MCMC.burnin = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
+    seed = 1234,
+    MCMLE.maxit = 40,
+    parallel = 6,
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
+  )
+)
+```
+
+
+#### ERGM Interpret Pre
+```{r}
+ergm_analysis(FinalModel, "post-election")
+
+```
+
+
+
+
 
 # 7. Summary
 
