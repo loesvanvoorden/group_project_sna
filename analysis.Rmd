@@ -460,7 +460,6 @@ Study 2 uses GERGM (Generalized Exponential Random Graph Model) to model network
 # Ideology attributes are already in the nodelist, just copy to networks
 g_study2_pre <- g_pre_connected
 g_study2_post <- g_post_connected
-
 # The left_right attribute is already available from nodelist creation
 
 print("STUDY 2: IDEOLOGY ATTRIBUTES ADDED")
@@ -544,6 +543,11 @@ print("===============================")
 print("Co-sponsorship and coalition counts added as edge attributes")
 print("Networks are already fully connected from general preprocessing")
 print("Networks ready for GERGM analysis")
+```
+```{r}
+snafun::extract_edge_attribute(g_study2_pre,cosponsor_count)
+
+
 ```
 
 ------------------------------------------------------------------------
@@ -782,7 +786,7 @@ snafun::g_summary(g_study2_pre_cleaned)
 g_study2_post_cleaned <- g_study2_post
 snafun::g_summary(g_study2_post_cleaned)
 
-
+g_study2_pre_cleaned
 ##Remove nodes of parties not present in these elections
 # Pre
 pre_nodes_to_remove <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
@@ -810,8 +814,11 @@ edge_weights_post <- igraph::E(g_study2_post_cleaned)$weight
 
 
 ## Cut-off threshold percentages to investigate
-prob <- c(0.25, 0.50, 0.60, 0.68, 0.70, 0.75)
-name <- c("p25","p50","p60","p68", "p70", "p75")
+#prob <- c(0.25, 0.50, 0.60, 0.68, 0.70, 0.75)
+#name <- c("p25","p50","p60","p68", "p70", "p75")
+
+prob <- c(0.60, 0.62, 0.65, 0.68, 0.70, 0.75, 0.8)
+name <- c("p60","p62","p65","p68", "p70", "p75", "p80")
 #Pre
 cutoffs_pre <- quantile(edge_weights_pre, probs = prob, na.rm = TRUE)
 cutoffs_pre <- as.list(cutoffs_pre)
@@ -917,9 +924,8 @@ for (name in names(g_post_list)) {
 #### ERGM Prep
 
 ```{r}
-## Pre
 
-thresholded_pre <- g_p68_pre
+thresholded_pre <- g_p65_pre
 
 party_names <- igraph::V(thresholded_pre)$name
 igraph::V(thresholded_pre)$left_right <- nodelist$left_right[
@@ -929,12 +935,23 @@ thresholded_pre_net <- snafun::to_network(thresholded_pre)
 
 network::set.vertex.attribute(thresholded_pre_net, "left_right", igraph::V(thresholded_pre)$left_right)
 
-cosponsor_mat  <- as.matrix.network(thresholded_pre_net, attrname = "cosponsor_count")
 coalition_mat  <- as.matrix.network(thresholded_pre_net, attrname = "coalition_count")
 
+#Adding Cosponsor 
+edgelist_pre_cosponsor <- read.csv("results/edge_lists/cosponsor_pre_election.csv")
+
+#Filtering edgelist on parties in the network
+edgelist_pre_cosponsor_filtered <- subset(edgelist_pre_cosponsor,from %in% party_names & to %in% party_names)
+g_pre_cos <- igraph::graph_from_data_frame(edgelist_pre_cosponsor_filtered,FALSE,data.frame(name = party_names))
+cosponsor_pre_mat <- igraph::as_adjacency_matrix(g_pre_cos, attr = 'weight', sparse = FALSE)
+
+```
+
+
+```{r}
 ## Post
 
-thresholded_post <- g_p68_post
+thresholded_post <- g_p65_post
 
 party_names <- igraph::V(thresholded_post)$name
 igraph::V(thresholded_post)$left_right <- nodelist$left_right[
@@ -944,10 +961,22 @@ thresholded_post_net <- snafun::to_network(thresholded_post)
 
 network::set.vertex.attribute(thresholded_post_net, "left_right", igraph::V(thresholded_post)$left_right)
 
-cosponsor_mat  <- as.matrix.network(thresholded_post_net, attrname = "cosponsor_count")
-coalition_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_count")
+coalition_post_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_count")
+
+
+
+#Adding cosponsoring
+
+edgelist_post_cosponsor <- read.csv("results/edge_lists/cosponsor_post_formation.csv")
+#Filtering edgelist on parties in the network
+edgelist_post_cosponsor_filtered <- subset(edgelist_post_cosponsor,from %in% party_names & to %in% party_names)
+g_post_cos <- igraph::graph_from_data_frame(edgelist_post_cosponsor,FALSE,data.frame(name = parties_post))
+cosponsor_post_mat <- igraph::as_adjacency_matrix(g_post_cos, attr = 'weight', sparse = FALSE)
+
 
 ```
+
+
 
 #### ERGM Run Pre
 
@@ -957,13 +986,13 @@ coalition_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_
 Model1 <- ergm::ergm(
     thresholded_pre_net ~ 
     edges +
-    absdiff("left_right"),
+    absdiff("left_right") + gwesp(0.1, fixed = TRUE)+ kstar(3),
   control = ergm::control.ergm(
     MCMC.burnin = 7000,
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -971,13 +1000,13 @@ Model1 <- ergm::ergm(
 Model2 <- ergm::ergm(
     thresholded_pre_net ~ 
     edges +
-    edgecov(cosponsor_mat),
+    absdiff("left_right") + gwesp(0.3, fixed = TRUE)+ kstar(3),
   control = ergm::control.ergm(
     MCMC.burnin = 7000,
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -985,13 +1014,13 @@ Model2 <- ergm::ergm(
 Model3 <- ergm::ergm(
     thresholded_pre_net ~ 
     edges +
-    edgecov(coalition_mat),
+    absdiff("left_right") + gwesp(0.5, fixed = TRUE)+ kstar(3),
   control = ergm::control.ergm(
     MCMC.burnin = 7000,
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1006,7 +1035,7 @@ Model4 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1021,7 +1050,7 @@ Model5 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1036,7 +1065,7 @@ Model6 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1052,7 +1081,7 @@ Model7 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1077,7 +1106,7 @@ Model1 <- ergm::ergm(
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
@@ -1093,7 +1122,7 @@ Model2 <- ergm::ergm(
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
@@ -1112,7 +1141,7 @@ Model3 <- ergm::ergm(
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
@@ -1129,21 +1158,22 @@ texreg::screenreg(list(Model1, Model2, Model3))
 
 FinalModel <- ergm::ergm(
     thresholded_pre_net ~ 
-    edges +
+    edges + absdiff("left_right") +
     kstar(3) +
-    gwesp(0.1, fixed = TRUE) +
-    edgecov(coalition_mat),
+    gwesp(0.5, fixed = TRUE),
   control = ergm::control.ergm(
     MCMC.burnin = 20000,
     MCMC.samplesize = 25000,
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
 )
+
+texreg::screenreg(list(FinalModel))
 ```
 
 
@@ -1165,6 +1195,7 @@ ergm_analysis <- function(model, prefix) {
   # MCMC Diagnostics (plots)
   mcmc_diag_file <- file.path(output_dir, paste(prefix, "mcmc.pdf"))
   pdf(mcmc_diag_file)
+  ergm::mcmc.diagnostics(model)
   dev.off()
   cat("MCMC saved in ", mcmc_diag_file, "\n")
   
@@ -1172,6 +1203,7 @@ ergm_analysis <- function(model, prefix) {
   gof_results <- ergm::gof(model)
   gof_plot_file <- file.path(output_dir, paste(prefix, "gof.pdf"))
   pdf(gof_plot_file)
+  snafun::stat_plot_gof(gof_results)
   dev.off()
   cat("GOF saved in", gof_plot_file, "\n")
 
@@ -1195,7 +1227,7 @@ Model1 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1209,7 +1241,7 @@ Model2 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1223,7 +1255,7 @@ Model3 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1238,7 +1270,7 @@ Model4 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1253,7 +1285,7 @@ Model5 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1268,7 +1300,7 @@ Model6 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1284,7 +1316,7 @@ Model7 <- ergm::ergm(
     MCMC.samplesize = 20000,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK"
   )
 )
@@ -1306,7 +1338,7 @@ Model1 <- ergm::ergm(
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
@@ -1315,14 +1347,14 @@ Model1 <- ergm::ergm(
 Model2 <- ergm::ergm(
     thresholded_post_net ~ 
     edges +
-    kstar(3),
+    kstar(2),
   control = ergm::control.ergm(
     MCMC.burnin = 20000,
     MCMC.samplesize = 25000,
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
@@ -1333,7 +1365,7 @@ Model3 <- ergm::ergm(
     thresholded_post_net ~ 
     edges +
     #gwdegree(0.1, fixed=TRUE) +
-    kstar(3)+  
+    kstar(2)+  
     gwesp(0.1, fixed = TRUE),
   control = ergm::control.ergm(
     MCMC.burnin = 20000,
@@ -1341,7 +1373,7 @@ Model3 <- ergm::ergm(
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
@@ -1351,34 +1383,39 @@ texreg::screenreg(list(Model1, Model2, Model3))
 
 ```
 
+
+
 ```{r}
 
 #Final Model
 
 FinalModel <- ergm::ergm(
-    thresholded_post_net ~ 
-    edges +
-    kstar(3) +
-    gwesp(0.1, fixed = TRUE) +
-    edgecov(coalition_mat),
+  thresholded_post_net ~
+    edges + kstar(3) + gwesp(0.5, fixed = TRUE) +
+    edgecov(cosponsor_post_mat) +
+    edgecov(coalition_post_mat) +
+    absdiff("left_right"),
   control = ergm::control.ergm(
     MCMC.burnin = 20000,
     MCMC.samplesize = 25000,
     MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
-    parallel = 6,
+    parallel = 5,
     parallel.type = "PSOCK",
     MCMC.prop = ~sparse + .triadic
   )
 )
 ```
+```{r}
+
+texreg::screenreg(list(FinalModel))
+``` 
 
 
 #### ERGM Interpret Pre
 ```{r}
 ergm_analysis(FinalModel, "post-election")
-
 ```
 
 
