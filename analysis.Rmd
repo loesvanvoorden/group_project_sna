@@ -528,15 +528,15 @@ add_edge_attribute <- function(g_voting, edgelist_attribute, attr_name) {
 # Load pre-generated filtered edge lists for Study 2
 edgelist_cosponsor_pre_filtered <- read.csv("results/edge_lists/study2_cosponsor_pre_election.csv", stringsAsFactors = FALSE)
 edgelist_cosponsor_post_filtered <- read.csv("results/edge_lists/study2_cosponsor_post_formation.csv", stringsAsFactors = FALSE)
-coalition_edgelist_pre_filtered <- read.csv("results/edge_lists/study2_coalition_filtered.csv", stringsAsFactors = FALSE)
-coalition_edgelist_post_filtered <- read.csv("results/edge_lists/study2_coalition_filtered.csv", stringsAsFactors = FALSE)
+edgelist_coalition_pre_filtered <- read.csv("results/edge_lists/study2_coalition_filtered_pre.csv", stringsAsFactors = FALSE)
+edgelist_coalition_post_filtered <- read.csv("results/edge_lists/study2_coalition_filtered_post.csv", stringsAsFactors = FALSE)
 
 # Add edge attributes
 g_study2_pre <- add_edge_attribute(g_study2_pre, edgelist_cosponsor_pre_filtered, "cosponsor_count")
-g_study2_pre <- add_edge_attribute(g_study2_pre, coalition_edgelist_pre_filtered, "coalition_count")
+g_study2_pre <- add_edge_attribute(g_study2_pre, edgelist_coalition_pre_filtered, "coalition_count")
 
 g_study2_post <- add_edge_attribute(g_study2_post, edgelist_cosponsor_post_filtered, "cosponsor_count")
-g_study2_post <- add_edge_attribute(g_study2_post, coalition_edgelist_post_filtered, "coalition_count")
+g_study2_post <- add_edge_attribute(g_study2_post, edgelist_coalition_post_filtered, "coalition_count")
 
 print("STUDY 2: EDGE ATTRIBUTES ADDED")
 print("===============================")
@@ -924,7 +924,7 @@ for (name in names(g_post_list)) {
 #### ERGM Prep
 
 ```{r}
-
+## Pre
 thresholded_pre <- g_p65_pre
 
 party_names <- igraph::V(thresholded_pre)$name
@@ -935,7 +935,15 @@ thresholded_pre_net <- snafun::to_network(thresholded_pre)
 
 network::set.vertex.attribute(thresholded_pre_net, "left_right", igraph::V(thresholded_pre)$left_right)
 
-coalition_mat  <- as.matrix.network(thresholded_pre_net, attrname = "coalition_count")
+#coalition_pre_mat  <- as.matrix.network(thresholded_pre_net, attrname = "coalition_count")
+
+#Adding coalition 
+edgelist_pre_coalition <- read.csv2("results/edge_lists/study2_coalition_filtered_pre.csv")
+
+#Filtering edgelist on parties in the network
+edgelist_pre_coalition_filtered <- subset(edgelist_pre_coalition,from %in% party_names & to %in% party_names)
+g_pre_coa <- igraph::graph_from_data_frame(edgelist_pre_coalition_filtered,FALSE,data.frame(name = party_names))
+coalition_pre_mat <- igraph::as_adjacency_matrix(g_pre_coa, attr = 'weight', sparse = FALSE)
 
 #Adding Cosponsor 
 edgelist_pre_cosponsor <- read.csv("results/edge_lists/cosponsor_pre_election.csv")
@@ -944,7 +952,6 @@ edgelist_pre_cosponsor <- read.csv("results/edge_lists/cosponsor_pre_election.cs
 edgelist_pre_cosponsor_filtered <- subset(edgelist_pre_cosponsor,from %in% party_names & to %in% party_names)
 g_pre_cos <- igraph::graph_from_data_frame(edgelist_pre_cosponsor_filtered,FALSE,data.frame(name = party_names))
 cosponsor_pre_mat <- igraph::as_adjacency_matrix(g_pre_cos, attr = 'weight', sparse = FALSE)
-
 ```
 
 
@@ -961,18 +968,23 @@ thresholded_post_net <- snafun::to_network(thresholded_post)
 
 network::set.vertex.attribute(thresholded_post_net, "left_right", igraph::V(thresholded_post)$left_right)
 
-coalition_post_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_count")
+#coalition_post_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_count")
 
+#Adding coalition 
+edgelist_post_coalition <- read.csv("results/edge_lists/study2_coalition_filtered_post.csv")
 
+#Filtering edgelist on parties in the network
+edgelist_post_coalition_filtered <- subset(edgelist_post_coalition,from %in% party_names & to %in% party_names)
+g_post_coa <- igraph::graph_from_data_frame(edgelist_post_coalition_filtered,FALSE,data.frame(name = party_names))
+coalition_post_mat <- igraph::as_adjacency_matrix(g_post_coa, attr = 'weight', sparse = FALSE)
 
 #Adding cosponsoring
 
 edgelist_post_cosponsor <- read.csv("results/edge_lists/cosponsor_post_formation.csv")
 #Filtering edgelist on parties in the network
 edgelist_post_cosponsor_filtered <- subset(edgelist_post_cosponsor,from %in% party_names & to %in% party_names)
-g_post_cos <- igraph::graph_from_data_frame(edgelist_post_cosponsor,FALSE,data.frame(name = parties_post))
+g_post_cos <- igraph::graph_from_data_frame(edgelist_post_cosponsor,FALSE,data.frame(name = party_names))
 cosponsor_post_mat <- igraph::as_adjacency_matrix(g_post_cos, attr = 'weight', sparse = FALSE)
-
 
 ```
 
@@ -986,107 +998,68 @@ cosponsor_post_mat <- igraph::as_adjacency_matrix(g_post_cos, attr = 'weight', s
 Model1 <- ergm::ergm(
     thresholded_pre_net ~ 
     edges +
-    absdiff("left_right") + gwesp(0.1, fixed = TRUE)+ kstar(3),
+    absdiff("left_right") + 
+    edgecov(cosponsor_pre_mat) +
+    #edgecov(coalition_pre_mat) +
+    gwesp(0.1, fixed = TRUE) + 
+    kstar(3),
   control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
     parallel = 5,
-    parallel.type = "PSOCK"
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
   )
 )
+```
 
+```{r}
 Model2 <- ergm::ergm(
     thresholded_pre_net ~ 
     edges +
-    absdiff("left_right") + gwesp(0.3, fixed = TRUE)+ kstar(3),
+    absdiff("left_right") + 
+    edgecov(cosponsor_pre_mat) +
+    #edgecov(coalition_pre_mat) +
+    gwesp(0.3, fixed = TRUE) + 
+    kstar(3),
   control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
     parallel = 5,
-    parallel.type = "PSOCK"
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
   )
 )
+```
 
+```{r}
 Model3 <- ergm::ergm(
     thresholded_pre_net ~ 
     edges +
-    absdiff("left_right") + gwesp(0.5, fixed = TRUE)+ kstar(3),
+    absdiff("left_right") + 
+    edgecov(cosponsor_pre_mat) +
+    #edgecov(coalition_pre_mat) +
+    gwesp(0.5, fixed = TRUE) + 
+    kstar(3),
   control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
+    MCMC.samplesize = 25000,
+    MCMC.interval = 1500,
     seed = 1234,
     MCMLE.maxit = 40,
     parallel = 5,
-    parallel.type = "PSOCK"
+    parallel.type = "PSOCK",
+    MCMC.prop = ~sparse + .triadic
   )
 )
 
-Model4 <- ergm::ergm(
-    thresholded_pre_net ~ 
-    edges +
-    edgecov(cosponsor_mat) +
-    edgecov(coalition_mat),
-  control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
-    seed = 1234,
-    MCMLE.maxit = 40,
-    parallel = 5,
-    parallel.type = "PSOCK"
-  )
-)
+```
 
-Model5 <- ergm::ergm(
-    thresholded_pre_net ~ 
-    edges +
-    absdiff("left_right") +
-    edgecov(coalition_mat),
-  control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
-    seed = 1234,
-    MCMLE.maxit = 40,
-    parallel = 5,
-    parallel.type = "PSOCK"
-  )
-)
-
-Model6 <- ergm::ergm(
-    thresholded_pre_net ~ 
-    edges +
-    edgecov(cosponsor_mat) +
-    absdiff("left_right"),
-  control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
-    seed = 1234,
-    MCMLE.maxit = 40,
-    parallel = 5,
-    parallel.type = "PSOCK"
-  )
-)
-
-Model7 <- ergm::ergm(
-    thresholded_pre_net ~ 
-    edges +
-    edgecov(cosponsor_mat) +
-    edgecov(coalition_mat) +
-    absdiff("left_right"),
-  control = ergm::control.ergm(
-    MCMC.burnin = 7000,
-    MCMC.samplesize = 20000,
-    seed = 1234,
-    MCMLE.maxit = 40,
-    parallel = 5,
-    parallel.type = "PSOCK"
-  )
-)
-
-texreg::screenreg(list(Model1, Model2, Model3, Model4, Model5, Model6, Model7))
+```{r}
+texreg::screenreg(list(Model1, Model2, Model3))
 
 ```
 
