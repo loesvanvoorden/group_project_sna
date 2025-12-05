@@ -119,6 +119,7 @@ g_post_connected <- igraph::graph_from_data_frame(
 )
 
 
+
 #extract adjacency matrix
 adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre_connected, attr = "weight", sparse = FALSE)
 adj_matrix_post <- igraph::as_adjacency_matrix(g_post_connected, attr = "weight", sparse = FALSE)
