@@ -161,21 +161,6 @@ write.csv(adj_matrix_post, "results/adjacency_matrices/post_formation_adjacency.
 
 
 
-#Filtering edgelist on parties in the network
-edgelist_post_coalition_filtered <- subset(edgelist_post_coalition,from %in% party_names & to %in% party_names)
-
-g_post_coa <- igraph::graph_from_data_frame(edgelist_post_coalition_filtered,FALSE,data.frame(name = party_names))
-
-coalition_post_mat <- igraph::as_adjacency_matrix(g_post_coa, attr = 'weight', sparse = FALSE)
-
-#Adding cosponsoring
-
-edgelist_post_cosponsor <- read.csv("results/edge_lists/cosponsor_post_formation.csv")
-#Filtering edgelist on parties in the network
-edgelist_post_cosponsor_filtered <- subset(edgelist_post_cosponsor,from %in% party_names & to %in% party_names)
-g_post_cos <- igraph::graph_from_data_frame(edgelist_post_cosponsor,FALSE,data.frame(name = party_names))
-cosponsor_post_mat <- igraph::as_adjacency_matrix(g_post_cos, attr = 'weight', sparse = FALSE)
-
 ```
 
 ------------------------------------------------------------------------
@@ -403,79 +388,188 @@ print(sprintf("Post-formation: %d nodes, fully connected (%d edges)",
 print("Left-right ideology attributes added to vertices")
 ```
 
-## 4.2 Add Co-Sponsorship and Coalition Edge Attributes
+## 4.2 Checking best cut-off threshold percentage pre
 
 ```{r study2-edge-attributes}
-# Function to add edge attribute from edgelist
-add_edge_attribute <- function(g_voting, edgelist_attribute, attr_name) {
-  edges_voting <- igraph::as_data_frame(g_voting, what = "edges")
+# Pre
+total_motions_pre  <- length(unique(motion_data_pre$Besluit_Id))
+counted_weights_pre <- igraph::E(g_study2_pre)$weight
+igraph::E(g_study2_pre)$weight_count <- counted_weights_pre
+igraph::E(g_study2_pre)$weight <- counted_weights_pre / total_motions_pre
+snafun::g_summary(g_study2_pre)
+edge_weights_pre <- igraph::E(g_study2_pre)$weight
+
+# Post
+total_motions_post  <- length(unique(motion_data_post$Besluit_Id))
+counted_weights_post <- igraph::E(g_study2_post)$weight
+igraph::E(g_study2_post)$weight_count <- counted_weights_post
+igraph::E(g_study2_post)$weight <- counted_weights_post / total_motions_post
+snafun::g_summary(g_study2_post)
+edge_weights_post <- igraph::E(g_study2_post)$weight
+
+
+## Cut-off threshold percentages to investigate
+
+prob <- c(0.60, 0.62, 0.65, 0.68, 0.70, 0.75, 0.8)
+name <- c("p60","p62","p65","p68", "p70", "p75", "p80")
+#Pre
+cutoffs_pre <- quantile(edge_weights_pre, probs = prob, na.rm = TRUE)
+cutoffs_pre <- as.list(cutoffs_pre)
+names(cutoffs_pre) <- name
+# Post
+cutoffs_post <- quantile(edge_weights_post, probs = prob, na.rm = TRUE)
+cutoffs_post <- as.list(cutoffs_post)
+names(cutoffs_post) <- name
+
+
+
+g_pre_list <- list()
+g_post_list <- list()
+dist_pre_list <- list()
+dist_post_list <- list()
+summary_pre_list <- list()
+summary_post_list <- list()
+```
+
+```{r}
+for (name in names(cutoffs_pre)){
+  threshold <- cutoffs_pre[[name]]
   
-  # Create canonical party pair names (alphabetical order) for matching
-  edges_voting$party_pair <- paste(
-    pmin(edges_voting$from, edges_voting$to),
-    pmax(edges_voting$from, edges_voting$to),
-    sep = "_"
+  # Subgraph generation
+  graph_temporary <- igraph::subgraph.edges(
+    g_study2_pre_cleaned,
+    eids = igraph::E(g_study2_pre_cleaned)[
+      igraph::E(g_study2_pre_cleaned)$weight >= threshold],
+    delete.vertices = FALSE
   )
   
-
-  # Create canonical party pair names for attribute edges
-  if(nrow(edgelist_attribute) > 0) {
-    edgelist_attribute$party_pair <- paste(
-      pmin(edgelist_attribute$from, edgelist_attribute$to),
-      pmax(edgelist_attribute$from, edgelist_attribute$to),
-      sep = "_"
-    )
-    
-    # Match attribute weights to voting edges
-    attr_lookup <- edgelist_attribute$weight
-    names(attr_lookup) <- edgelist_attribute$party_pair
-    
-    # Add attribute (0 if no relationship)
-    edges_voting[[attr_name]] <- ifelse(
-      edges_voting$party_pair %in% names(attr_lookup),
-      attr_lookup[edges_voting$party_pair],
-      0
-    )
-  } else {
-    edges_voting[[attr_name]] <- 0
-  }
+  # Binarize Subgraph
+  igraph::E(graph_temporary)$weight <- 1
   
-  # Remove temporary party_pair column
-  edges_voting$party_pair <- NULL
+  cat("Pre-", name)
   
-  # Recreate graph with attribute
-  g_with_attr <- igraph::graph_from_data_frame(edges_voting, directed = FALSE,
-                                                vertices = igraph::V(g_voting)$name)
+  summary_temp <- snafun::g_summary(graph_temporary)
+  summary_pre_list[[name]] <- summary_temp
   
-  # Copy vertex attributes
-  for(attr in igraph::list.vertex.attributes(g_voting)) {
-    if(attr != "name") {
-      igraph::vertex_attr(g_with_attr, attr) <- igraph::vertex_attr(g_voting, attr)
-    }
-  }
+  print(summary_temp)
   
-  return(g_with_attr)
+  snafun::plot(graph_temporary, main = paste("Pre-",name))
+  g_pre_list[[name]] <- graph_temporary
+  
+  # Analyse Subgraph
+  dist_pre <- snafun::g_degree_distribution(graph_temporary)
+  dist_pre_list[[name]] <- dist_pre
+  values <- as.numeric(dist_pre[1, ])
+  barplot(values, names.arg = colnames(dist_pre), xlab="Index", ylab="Value", main = paste("Degree distribution pre-", name))
 }
 
-# Load pre-generated filtered edge lists for Study 2
-edgelist_cosponsor_pre_filtered <- read.csv("results/edge_lists/study2_cosponsor_pre_election.csv", stringsAsFactors = FALSE)
-edgelist_cosponsor_post_filtered <- read.csv("results/edge_lists/study2_cosponsor_post_formation.csv", stringsAsFactors = FALSE)
-coalition_edgelist_pre_filtered <- read.csv("results/edge_lists/study2_coalition_filtered.csv", stringsAsFactors = FALSE)
-coalition_edgelist_post_filtered <- read.csv("results/edge_lists/study2_coalition_filtered.csv", stringsAsFactors = FALSE)
+for (name in names(g_pre_list)) {
+  new_name <- paste("g", name, "pre", sep="_")
+  assign(new_name, g_pre_list[[name]])
+}
 
-# Add edge attributes
-g_study2_pre <- add_edge_attribute(g_study2_pre, edgelist_cosponsor_pre_filtered, "cosponsor_count")
-g_study2_pre <- add_edge_attribute(g_study2_pre, coalition_edgelist_pre_filtered, "coalition_count")
-
-g_study2_post <- add_edge_attribute(g_study2_post, edgelist_cosponsor_post_filtered, "cosponsor_count")
-g_study2_post <- add_edge_attribute(g_study2_post, coalition_edgelist_post_filtered, "coalition_count")
-
-print("STUDY 2: EDGE ATTRIBUTES ADDED")
-print("===============================")
-print("Co-sponsorship and coalition counts added as edge attributes")
-print("Networks are already fully connected from general preprocessing")
-print("Networks ready for GERGM analysis")
 ```
+
+```{r}
+for (name in names(cutoffs_post)){
+  threshold <- cutoffs_post[[name]]
+  
+  # Subgraph generation
+  graph_temporary <- igraph::subgraph.edges(
+    g_study2_post_cleaned,
+    eids = igraph::E(g_study2_post_cleaned)[
+      igraph::E(g_study2_post_cleaned)$weight >= threshold],
+    delete.vertices = FALSE
+  )
+  
+  # Binarize Subgraph
+  igraph::E(graph_temporary)$weight <- 1
+  
+  cat("Post-", name)
+  
+  summary_temp <- snafun::g_summary(graph_temporary)
+  summary_post_list[[name]] <- summary_temp
+  
+  print(summary_temp)
+  
+  snafun::plot(graph_temporary, main = paste("Post-",name))
+  g_post_list[[name]] <- graph_temporary
+  
+  # Analyse Subgraph
+  dist_post <- snafun::g_degree_distribution(graph_temporary)
+  dist_post_list[[name]] <- dist_post
+  values <- as.numeric(dist_post[1, ])
+  barplot(values, names.arg = colnames(dist_post), xlab="Index", ylab="Value", main = paste("Degree distribution post-", name))
+}
+
+for (name in names(g_post_list)) {
+  new_name <- paste("g", name, "post", sep="_")
+  assign(new_name, g_post_list[[name]])
+}
+
+
+```
+
+# 4.3 Add edge attributes to Binary ERGM
+```{r}
+
+chosen_Cutoff <- "p75"
+
+#Pre
+thresholded_pre <- g_pre_list[[chosen_Cutoff]]
+
+party_names_pre <- igraph::V(thresholded_pre)$name
+igraph::V(thresholded_pre)$left_right <- nodelist$left_right[
+  match(party_names, nodelist$name)]
+
+#Create network object 
+thresholded_pre_net <- snafun::to_network(thresholded_pre)
+
+#Add vertex attribute left_right
+network::set.vertex.attribute(thresholded_pre_net, "left_right", igraph::V(thresholded_pre)$left_right)
+
+# Adding coalition
+edgelist_pre_coalition <- read.csv2("results/edge_lists/study2_coalition_filtered_pre.csv")
+edgelist_pre_coalition_filtered <- subset(edgelist_pre_coalition,from %in% party_names & to %in% party_names)
+g_pre_coa <- igraph::graph_from_data_frame(edgelist_pre_coalition_filtered,directed = FALSE,vertices = data.frame(name = party_names_pre))
+coalition_pre_mat <- igraph::as_adjacency_matrix(g_pre_coa, attr = "weight",sparse = FALSE)
+
+
+#Adding cosponsoring
+edgelist_pre_cosponsor <- read.csv("results/edge_lists/cosponsor_pre_election.csv")
+edgelist_pre_cosponsor_filtered <- subset(edgelist_pre_cosponsor,from %in% party_names & to %in% party_names)
+g_pre_cos <- igraph::graph_from_data_frame(edgelist_pre_cosponsor_filtered,FALSE,data.frame(name = party_names_pre))
+cosponsor_pre_mat <- igraph::as_adjacency_matrix(g_pre_cos, attr = 'weight', sparse = FALSE)
+
+
+# Post
+thresholded_post <- g_post_list[[chosen_Cutoff]]
+
+party_names_post <- igraph::V(thresholded_post)$name
+igraph::V(thresholded_post)$left_right <- nodelist$left_right[
+  match(party_names, nodelist$name)]
+
+#Create network object 
+thresholded_post_net <- snafun::to_network(thresholded_post)
+
+#Add vertex attribute left_right
+network::set.vertex.attribute(thresholded_post_net, "left_right", igraph::V(thresholded_post)$left_right)
+
+# Adding coalition
+edgelist_post_coalition <- read.csv2("results/edge_lists/study2_coalition_filtered_post.csv")
+edgelist_post_cosponsor_filtered <- subset(edgelist_post_cosponsor,from %in% party_names & to %in% party_names)
+g_post_coa <- igraph::graph_from_data_frame(edgelist_post_coalition_filtered,directed = FALSE,vertices = data.frame(name = party_names_post))
+coalition_post_mat <- igraph::as_adjacency_matrix(g_post_coa, attr = "weight",sparse = FALSE)
+
+#Adding cosponsoring
+edgelist_post_cosponsor <- read.csv("results/edge_lists/cosponsor_post_formation.csv")
+#Filtering edgelist on parties in the network
+edgelist_post_cosponsor_filtered <- subset(edgelist_post_cosponsor,from %in% party_names & to %in% party_names)
+g_post_cos <- igraph::graph_from_data_frame(edgelist_post_cosponsor,FALSE,data.frame(name = party_names_post))
+cosponsor_post_mat <- igraph::as_adjacency_matrix(g_post_cos, attr = 'weight', sparse = FALSE)
+
+```
+
 
 ------------------------------------------------------------------------
 
@@ -653,11 +747,11 @@ print("QAP results saved to results/statistics/qap_results.RData")
 
 ## 6.1 Overview
 
-GERGM (Generalized Exponential Random Graph Model) will be used in Study 2 to model network formation with covariates. GERGM allows us to test hypotheses about which factors influence voting agreement between parties.
+ERGM (Exponential Random Graph Model) will be used in Study 2 to model network formation with covariates. ERGM allows us to test hypotheses about which factors influence voting agreement between parties.
 
 ## 6.2 Hypotheses and Model Terms
 
-The GERGM will test the following hypotheses:
+The ERGM will test the following hypotheses:
 
 -   **H2.1**: Parties with similar ideologies on the left-right spectrum are more likely to agree on motions.
     -   *Term*: `absdiff(LeftVSRight)` - measures how differences in ideology impact tie formation
@@ -670,227 +764,6 @@ The GERGM will test the following hypotheses:
 -   **H2.5**: Parties who frequently co-sponsor motions tend to agree more with each other.
     -   *Term*: `edgecov(cosponsor_count)` - uses co-sponsorship count as edge covariate
 
-```{r eval=FALSE}
-
-nodelist <- data.frame(
-  name = sort(ideology_data$party),
-  left_right = ideology_data$left_right[match(sort(ideology_data$party), ideology_data$party)],
-  conservative_progressive = ideology_data$conservative_progressive[match(sort(ideology_data$party), ideology_data$party)],
-  stringsAsFactors = FALSE
-)
-
-
-g_pre <- igraph::graph_from_data_frame(d = edgelist_pre, vertices = nodelist, directed = FALSE)
-g_post <- igraph::graph_from_data_frame(d = edgelist_post, vertices = nodelist, directed = FALSE)
-
-snafun::g_summary(g_pre)
-snafun::g_summary(g_post)
-
-
-
-
-```
-
-## Pre election network Prep
-
-```{r eval=FALSE}
-
-## Create cleaned network
-# Pre
-g_study2_pre_cleaned <- g_study2_pre
-snafun::g_summary(g_study2_pre_cleaned)
-# Post
-g_study2_post_cleaned <- g_study2_post
-snafun::g_summary(g_study2_post_cleaned)
-
-g_study2_pre_cleaned
-##Remove nodes of parties not present in these elections
-# Pre
-pre_nodes_to_remove <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
-g_study2_pre_cleaned <- snafun::remove_vertices(g_study2_pre_cleaned,pre_nodes_to_remove)
-# Post
-post_nodes_to_remove <- c("GroenLinks","Omtzigt", "PvdA", "BIJ1", "BVNL", '50PLUS')
-g_study2_post_cleaned <- snafun::remove_vertices(g_study2_post_cleaned,post_nodes_to_remove)
-
-
-## Edge weight: motion counts as fractions of total motions
-# Pre
-total_motions_pre  <- length(unique(motion_data_pre$Besluit_Id))
-counted_weights_pre <- igraph::E(g_study2_pre_cleaned)$weight
-igraph::E(g_study2_pre_cleaned)$weight_count <- counted_weights_pre
-igraph::E(g_study2_pre_cleaned)$weight <- counted_weights_pre / total_motions_pre
-snafun::g_summary(g_study2_pre_cleaned)
-edge_weights_pre <- igraph::E(g_study2_pre_cleaned)$weight
-# Post
-total_motions_post  <- length(unique(motion_data_post$Besluit_Id))
-counted_weights_post <- igraph::E(g_study2_post_cleaned)$weight
-igraph::E(g_study2_post_cleaned)$weight_count <- counted_weights_post
-igraph::E(g_study2_post_cleaned)$weight <- counted_weights_post / total_motions_post
-snafun::g_summary(g_study2_post_cleaned)
-edge_weights_post <- igraph::E(g_study2_post_cleaned)$weight
-
-
-## Cut-off threshold percentages to investigate
-#prob <- c(0.25, 0.50, 0.60, 0.68, 0.70, 0.75)
-#name <- c("p25","p50","p60","p68", "p70", "p75")
-
-prob <- c(0.60, 0.62, 0.65, 0.68, 0.70, 0.75, 0.8)
-name <- c("p60","p62","p65","p68", "p70", "p75", "p80")
-#Pre
-cutoffs_pre <- quantile(edge_weights_pre, probs = prob, na.rm = TRUE)
-cutoffs_pre <- as.list(cutoffs_pre)
-names(cutoffs_pre) <- name
-# Post
-cutoffs_post <- quantile(edge_weights_post, probs = prob, na.rm = TRUE)
-cutoffs_post <- as.list(cutoffs_post)
-names(cutoffs_post) <- name
-
-
-
-g_pre_list <- list()
-g_post_list <- list()
-dist_pre_list <- list()
-dist_post_list <- list()
-summary_pre_list <- list()
-summary_post_list <- list()
-
-```
-
-### Loop voor alle pre-thresholds
-
-```{r}
-for (name in names(cutoffs_pre)){
-  threshold <- cutoffs_pre[[name]]
-  
-  # Subgraph generation
-  graph_temporary <- igraph::subgraph.edges(
-    g_study2_pre_cleaned,
-    eids = igraph::E(g_study2_pre_cleaned)[
-      igraph::E(g_study2_pre_cleaned)$weight >= threshold],
-    delete.vertices = FALSE
-  )
-  
-  # Binarize Subgraph
-  igraph::E(graph_temporary)$weight <- 1
-  
-  cat("Pre-", name)
-  
-  summary_temp <- snafun::g_summary(graph_temporary)
-  summary_pre_list[[name]] <- summary_temp
-  
-  print(summary_temp)
-  
-  snafun::plot(graph_temporary, main = paste("Pre-",name))
-  g_pre_list[[name]] <- graph_temporary
-  
-  # Analyse Subgraph
-  dist_pre <- snafun::g_degree_distribution(graph_temporary)
-  dist_pre_list[[name]] <- dist_pre
-  values <- as.numeric(dist_pre[1, ])
-  barplot(values, names.arg = colnames(dist_pre), xlab="Index", ylab="Value", main = paste("Degree distribution pre-", name))
-}
-
-for (name in names(g_pre_list)) {
-  new_name <- paste("g", name, "pre", sep="_")
-  assign(new_name, g_pre_list[[name]])
-}
-
-```
-
-#### Loop voor alle post-thresholds
-
-```{r}
-for (name in names(cutoffs_post)){
-  threshold <- cutoffs_post[[name]]
-  
-  # Subgraph generation
-  graph_temporary <- igraph::subgraph.edges(
-    g_study2_post_cleaned,
-    eids = igraph::E(g_study2_post_cleaned)[
-      igraph::E(g_study2_post_cleaned)$weight >= threshold],
-    delete.vertices = FALSE
-  )
-  
-  # Binarize Subgraph
-  igraph::E(graph_temporary)$weight <- 1
-  
-  cat("Post-", name)
-  
-  summary_temp <- snafun::g_summary(graph_temporary)
-  summary_post_list[[name]] <- summary_temp
-  
-  print(summary_temp)
-  
-  snafun::plot(graph_temporary, main = paste("Post-",name))
-  g_post_list[[name]] <- graph_temporary
-  
-  # Analyse Subgraph
-  dist_post <- snafun::g_degree_distribution(graph_temporary)
-  dist_post_list[[name]] <- dist_post
-  values <- as.numeric(dist_post[1, ])
-  barplot(values, names.arg = colnames(dist_post), xlab="Index", ylab="Value", main = paste("Degree distribution post-", name))
-}
-
-for (name in names(g_post_list)) {
-  new_name <- paste("g", name, "post", sep="_")
-  assign(new_name, g_post_list[[name]])
-}
-
-```
-
-#### ERGM Prep
-
-```{r}
-
-thresholded_pre <- g_p65_pre
-
-party_names <- igraph::V(thresholded_pre)$name
-igraph::V(thresholded_pre)$left_right <- nodelist$left_right[
-  match(party_names, nodelist$name)]
-  
-thresholded_pre_net <- snafun::to_network(thresholded_pre)
-
-network::set.vertex.attribute(thresholded_pre_net, "left_right", igraph::V(thresholded_pre)$left_right)
-
-coalition_mat  <- as.matrix.network(thresholded_pre_net, attrname = "coalition_count")
-
-#Adding Cosponsor 
-edgelist_pre_cosponsor <- read.csv("results/edge_lists/cosponsor_pre_election.csv")
-
-#Filtering edgelist on parties in the network
-edgelist_pre_cosponsor_filtered <- subset(edgelist_pre_cosponsor,from %in% party_names & to %in% party_names)
-g_pre_cos <- igraph::graph_from_data_frame(edgelist_pre_cosponsor_filtered,FALSE,data.frame(name = party_names))
-cosponsor_pre_mat <- igraph::as_adjacency_matrix(g_pre_cos, attr = 'weight', sparse = FALSE)
-
-```
-
-```{r}
-## Post
-
-thresholded_post <- g_p65_post
-
-party_names <- igraph::V(thresholded_post)$name
-igraph::V(thresholded_post)$left_right <- nodelist$left_right[
-  match(party_names, nodelist$name)]
-  
-thresholded_post_net <- snafun::to_network(thresholded_post)
-
-network::set.vertex.attribute(thresholded_post_net, "left_right", igraph::V(thresholded_post)$left_right)
-
-coalition_post_mat  <- as.matrix.network(thresholded_post_net, attrname = "coalition_count")
-
-
-
-#Adding cosponsoring
-
-edgelist_post_cosponsor <- read.csv("results/edge_lists/cosponsor_post_formation.csv")
-#Filtering edgelist on parties in the network
-edgelist_post_cosponsor_filtered <- subset(edgelist_post_cosponsor,from %in% party_names & to %in% party_names)
-g_post_cos <- igraph::graph_from_data_frame(edgelist_post_cosponsor,FALSE,data.frame(name = parties_post))
-cosponsor_post_mat <- igraph::as_adjacency_matrix(g_post_cos, attr = 'weight', sparse = FALSE)
-
-
-```
 
 #### ERGM Run Pre
 
@@ -1069,7 +942,7 @@ texreg::screenreg(list(Model1, Model2, Model3))
 FinalModel <- ergm::ergm(
     thresholded_pre_net ~ 
     edges + absdiff("left_right") +
-    kstar(3) +
+    kstar(3) + edgecov(cosponsor_post_mat) + 
     gwesp(0.5, fixed = TRUE),
   control = ergm::control.ergm(
     MCMC.burnin = 20000,
@@ -1082,6 +955,7 @@ FinalModel <- ergm::ergm(
     MCMC.prop = ~sparse + .triadic
   )
 )
+
 
 texreg::screenreg(list(FinalModel))
 ```
