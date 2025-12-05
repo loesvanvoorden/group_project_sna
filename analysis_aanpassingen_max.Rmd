@@ -62,25 +62,25 @@ edgelist_post_coalition <- read.csv("results/edge_lists/study2_coalition_filtere
 # Load pre-generated edge lists
 edgelist_pre <- read.csv("results/edge_lists/edges_pre_election.csv", stringsAsFactors = FALSE)
 edgelist_post <- read.csv("results/edge_lists/edges_post_formation.csv", stringsAsFactors = FALSE)
-
-
 ```
 
 ## Generate Pre and Post election networks
 
 ```{r}
 
-parties_to_remove <- c("Omtzigt","BIJ1", "BVNL", "50PLUS")
+#generate named vectors of parties to remove from the dataset
+parties_to_remove_general <- c("Omtzigt","BIJ1", "BVNL", "50PLUS")
 nodes_to_remove_pre <- c("GroenLinks-PvdA","Omtzigt", "NSC", "BIJ1", "BVNL", '50PLUS')
 nodes_to_remove_post <- c("GroenLinks","Omtzigt", "PvdA", "BIJ1", "BVNL", '50PLUS')
 
-#generate node lists for the studies
+#generate node lists for the networks of both studies
 parties <- ideology_data$party
-parties_filtered <- parties[!parties %in% parties_to_remove]
+
+parties_filtered <- parties[!parties %in% parties_to_remove_general]
 parties_pre <- parties[!parties %in% nodes_to_remove_pre]
 parties_post <- parties[!parties %in% nodes_to_remove_post]
 
-#filter the extra edges out
+#filter out edges from the edgelist of pre and post
 edges_filtered_pre <- edgelist_pre[
   edgelist_pre$from %in% parties_pre &
   edgelist_pre$to   %in% parties_pre,
@@ -92,7 +92,7 @@ edges_filtered_post <- edgelist_post[
 ]
 
 
-#make graphs
+#make graphs for pre and post using the filtered edgelist
 
 g_pre <- igraph::graph_from_data_frame(edges_filtered_pre, directed = FALSE)
 g_post <- igraph::graph_from_data_frame(edges_filtered_post, directed = FALSE)
@@ -105,30 +105,29 @@ Study 1 requires fully connected networks. We create these networks with all par
 
 ```{r}
 
-#generate networks 
+#generate networks using filtered edgelist and vertices present in both networks
 g_pre_connected <- igraph::graph_from_data_frame(
   d = edges_filtered_pre,
   directed = FALSE,
-  vertices = parties
+  vertices = parties_filtered
 )
 
 g_post_connected <- igraph::graph_from_data_frame(
-  d = edges_filtered_pre,
+  d = edges_filtered_post,
   directed = FALSE,
-  vertices = parties
+  vertices = parties_filtered
 )
 
-#extract adjacency matrix and make fully connected
 
+#extract adjacency matrix
 adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre_connected, attr = "weight", sparse = FALSE)
-
 adj_matrix_post <- igraph::as_adjacency_matrix(g_post_connected, attr = "weight", sparse = FALSE)
 
-# Set 0 values to 1e-6 to make fully connected (but keep diagonal as 0)
+# Set 0 values to 1e-6 to make fully connected
 adj_matrix_pre[adj_matrix_pre == 0] <- 1e-6
 adj_matrix_post[adj_matrix_post == 0] <- 1e-6
 
-#remove selfloops
+#re-remove selfloops
 diag(adj_matrix_pre) <- 0
 diag(adj_matrix_post) <- 0
 
