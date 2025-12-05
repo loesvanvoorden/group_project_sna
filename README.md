@@ -45,7 +45,7 @@ python3 scripts/fetch_voting_data.py
 
 ```bash
 # Render analysis (HTML output)
-Rscript -e "rmarkdown::render('analysis.Rmd')"
+Rscript -e "rmarkdown::render('analysis.R')"
 
 # Or open in RStudio and click "Knit"
 ```
@@ -64,12 +64,12 @@ quarto render SNA4DSprojectTemplate2025.qmd
 ### Study 1: QAP Analysis
 - **Method:** Quadratic Assignment Procedure (QAP)
 - **Question:** Does network structure change between pre-election and post-formation periods?
-- **Networks:** Fully connected (all 21 parties), z-score normalized weights
+- **Networks:** Fully connected (all 17 parties), z-score normalized weights
 
-### Study 2: GERGM Analysis
-- **Method:** Generalized Exponential Random Graph Model (GERGM)
+### Study 2: Binarized ERGM Analysis
+- **Method:**  Binarized Exponential Random Graph Model (ERGM)
 - **Question:** What factors predict voting agreement between parties?
-- **Networks:** Sparse (all 21 parties), z-score normalized weights
+- **Networks:** Pre and post election specific (15 parties per network),
 - **Vertex attributes:** `left_right` (ideology)
 - **Edge attributes:** `cosponsor_count`, `coalition_count`
 
@@ -87,9 +87,9 @@ quarto render SNA4DSprojectTemplate2025.qmd
 ## Data Sources
 
 - **Voting Data:** Tweede Kamer OData API
-- **Ideology Data:** Kieskompas 2023 (21 parties, left-right dimension)
+- **Ideology Data:** Kieskompas 2021 & 2023
 - **Co-Sponsorship Data:** Tweede Kamer API (Document endpoint)
-- **Coalition Data:** Historical coalition records
+- **Coalition Data:** Historical coalition records self collected
 
 ---
 
@@ -112,11 +112,11 @@ pip install requests pandas
 
 ## Network Construction
 
-- **Nodes:** Political parties (21 parties)
+- **Nodes:** Political parties (17 parties)
 - **Edges:** Co-voting agreements (same vote on same motion)
 - **Edge Weight:** Number of agreements (raw) or z-score normalized
 - **Study 1:** Fully connected networks (zeros → 1e-6)
-- **Study 2:** Sparse networks (zeros remain zeros)
+- **Study 2:** Sparse networks containing only parties present within time window
 
 ---
 
