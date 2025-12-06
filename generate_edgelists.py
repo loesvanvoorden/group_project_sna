@@ -105,10 +105,12 @@ def generate_voting_edgelist(data, period_name):
     if agreements_dict:
         edgelist_data = []
         for (party1, party2), counts in agreements_dict.items():
+            # Calculate agreement rate as fraction (0-1)
+            agreement_rate = counts['agreements'] / counts['total_votes'] if counts['total_votes'] > 0 else 0
             edgelist_data.append({
                 'from': party1,
                 'to': party2,
-                'weight': counts['agreements']
+                'weight': agreement_rate
             })
         
         edgelist = pd.DataFrame(edgelist_data)
@@ -324,26 +326,59 @@ def main():
     print("4. FILTERED EDGE LISTS FOR STUDIES")
     print("-" * 40)
     
-    # Use valid parties from ideology data (already used for filtering)
-    print(f"Using {len(valid_parties)} valid parties from ideology data")
-    print(f"Parties: {', '.join(sorted(valid_parties))}")
+    # Define party removal strategy (matching R script logic)
+    parties_to_remove_general = ["Omtzigt", "BIJ1", "BVNL", "50PLUS"]
+    nodes_to_remove_pre_additional = ["GroenLinks-PvdA", "NSC"]
+    nodes_to_remove_post_additional = ["GroenLinks", "PvdA"]
+    
+    # Complete removal lists for Study 2
+    nodes_to_remove_pre_study2 = parties_to_remove_general + nodes_to_remove_pre_additional
+    nodes_to_remove_post_study2 = parties_to_remove_general + nodes_to_remove_post_additional
+    
+    # Study 1 parties (remove general parties only)
+    study1_parties = [p for p in valid_parties if p not in parties_to_remove_general]
+    
+    # Study 2 parties (different per period)
+    study2_parties_pre = [p for p in valid_parties if p not in nodes_to_remove_pre_study2]
+    study2_parties_post = [p for p in valid_parties if p not in nodes_to_remove_post_study2]
+    
+    print("PARTY FILTERING STRATEGY:")
+    print("=========================")
+    print(f"General removal (both studies): {', '.join(parties_to_remove_general)}")
+    print(f"Additional Study 2 pre-election: {', '.join(nodes_to_remove_pre_additional)}")
+    print(f"Additional Study 2 post-formation: {', '.join(nodes_to_remove_post_additional)}")
+    print()
+    print(f"Study 1: {len(study1_parties)} nodes (identical structure)")
+    print(f"Study 2: Pre({len(study2_parties_pre)} nodes), Post({len(study2_parties_post)} nodes)")
     print()
     
-    # Study 1 versions (edge lists are already filtered, just save them)
-    study1_pre = edgelist_pre.copy()
-    study1_post = edgelist_post.copy()
+    # Study 1 versions (identical node structure)
+    study1_pre = filter_edgelist_by_parties(edgelist_pre, study1_parties, "Study 1 voting pre")
+    study1_post = filter_edgelist_by_parties(edgelist_post, study1_parties, "Study 1 voting post")
+    study1_cosponsor_pre = filter_edgelist_by_parties(cosponsor_pre, study1_parties, "Study 1 co-sponsor pre")
+    study1_cosponsor_post = filter_edgelist_by_parties(cosponsor_post, study1_parties, "Study 1 co-sponsor post")
+    study1_coalition = filter_edgelist_by_parties(coalition_edgelist, study1_parties, "Study 1 coalition")
     
-    save_edgelist(study1_pre, "study1_pre_election_with_coauthoring.csv")
-    save_edgelist(study1_post, "study1_post_formation_with_coauthoring.csv")
+    save_edgelist(study1_pre, "study1_edges_pre_election.csv")
+    save_edgelist(study1_post, "study1_edges_post_formation.csv")
+    save_edgelist(study1_cosponsor_pre, "study1_cosponsor_pre_election.csv")
+    save_edgelist(study1_cosponsor_post, "study1_cosponsor_post_formation.csv")
+    save_edgelist(study1_coalition, "study1_coalition_edges.csv")
     
-    # Study 2 versions (filter co-sponsorship and coalition data by valid parties)
-    study2_cosponsor_pre = filter_edgelist_by_parties(cosponsor_pre, valid_parties, "Study 2 co-sponsor pre")
-    study2_cosponsor_post = filter_edgelist_by_parties(cosponsor_post, valid_parties, "Study 2 co-sponsor post") 
-    study2_coalition = filter_edgelist_by_parties(coalition_edgelist, valid_parties, "Study 2 coalition")
+    # Study 2 versions (optimized structure per period)
+    study2_voting_pre = filter_edgelist_by_parties(edgelist_pre, study2_parties_pre, "Study 2 voting pre")
+    study2_voting_post = filter_edgelist_by_parties(edgelist_post, study2_parties_post, "Study 2 voting post")
+    study2_cosponsor_pre = filter_edgelist_by_parties(cosponsor_pre, study2_parties_pre, "Study 2 co-sponsor pre")
+    study2_cosponsor_post = filter_edgelist_by_parties(cosponsor_post, study2_parties_post, "Study 2 co-sponsor post") 
+    study2_coalition_pre = filter_edgelist_by_parties(coalition_edgelist, study2_parties_pre, "Study 2 coalition pre")
+    study2_coalition_post = filter_edgelist_by_parties(coalition_edgelist, study2_parties_post, "Study 2 coalition post")
     
+    save_edgelist(study2_voting_pre, "study2_edges_pre_election.csv")
+    save_edgelist(study2_voting_post, "study2_edges_post_formation.csv")
     save_edgelist(study2_cosponsor_pre, "study2_cosponsor_pre_election.csv")
     save_edgelist(study2_cosponsor_post, "study2_cosponsor_post_formation.csv")
-    save_edgelist(study2_coalition, "study2_coalition_filtered.csv")
+    save_edgelist(study2_coalition_pre, "study2_coalition_pre_election.csv")
+    save_edgelist(study2_coalition_post, "study2_coalition_post_formation.csv")
     print()
     
     print("="*60)
@@ -351,13 +386,22 @@ def main():
     print("="*60)
     print()
     print("Generated files:")
+    print("BASE EDGE LISTS:")
     print("  • edges_pre_election.csv - Voting agreements (pre-election)")
     print("  • edges_post_formation.csv - Voting agreements (post-formation)")
     print("  • cosponsor_pre_election.csv - Co-sponsorships (pre-election)")
     print("  • cosponsor_post_formation.csv - Co-sponsorships (post-formation)")
     print("  • coalition_edges.csv - Coalition relationships")
-    print("  • study1_*.csv - Filtered edge lists for Study 1 (QAP)")
-    print("  • study2_*.csv - Filtered edge lists for Study 2 (GERGM)")
+    print()
+    print("STUDY 1 (QAP) - Identical node structure:")
+    print("  • study1_edges_*.csv - Voting agreements")
+    print("  • study1_cosponsor_*.csv - Co-sponsorships") 
+    print("  • study1_coalition_edges.csv - Coalition relationships")
+    print()
+    print("STUDY 2 (ERGM) - Optimized structure per period:")
+    print("  • study2_edges_*.csv - Voting agreements")
+    print("  • study2_cosponsor_*.csv - Co-sponsorships")
+    print("  • study2_coalition_*.csv - Coalition relationships")
     print()
     print("All files saved to: results/edge_lists/")
 

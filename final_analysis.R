@@ -12,37 +12,63 @@ ideology_data <- read.csv("data/political_axes_data.csv", stringsAsFactors = FAL
 names(ideology_data) <- c("left_right", "conservative_progressive", "party")
 ideology_data <- ideology_data[!is.na(ideology_data$party) & ideology_data$party != "", ]
 
-# Load pre-generated edge lists from Python script
-edgelist_pre <- read.csv("results/edge_lists/edges_pre_election.csv", stringsAsFactors = FALSE)
-edgelist_post <- read.csv("results/edge_lists/edges_post_formation.csv", stringsAsFactors = FALSE)
-edgelist_cosponsor_pre <- read.csv("results/edge_lists/cosponsor_pre_election.csv", stringsAsFactors = FALSE)
-edgelist_cosponsor_post <- read.csv("results/edge_lists/cosponsor_post_formation.csv", stringsAsFactors = FALSE)
-coalition_edgelist <- read.csv("results/edge_lists/coalition_edges.csv", stringsAsFactors = FALSE)
+# Load pre-filtered edge lists from Python script (no R filtering needed!)
 
-print(sprintf("  Ideology data: %d parties", nrow(ideology_data)))
-print(sprintf("  Pre-election edges: %d", nrow(edgelist_pre)))
-print(sprintf("  Post-formation edges: %d", nrow(edgelist_post)))
-print("")
+# Study 1 edge lists (identical node structure for QAP)
+study1_edgelist_pre <- read.csv("results/edge_lists/study1_edges_pre_election.csv", stringsAsFactors = FALSE)
+study1_edgelist_post <- read.csv("results/edge_lists/study1_edges_post_formation.csv", stringsAsFactors = FALSE)
+study1_cosponsor_pre <- read.csv("results/edge_lists/study1_cosponsor_pre_election.csv", stringsAsFactors = FALSE)
+study1_cosponsor_post <- read.csv("results/edge_lists/study1_cosponsor_post_formation.csv", stringsAsFactors = FALSE)
+study1_coalition <- read.csv("results/edge_lists/study1_coalition_edges.csv", stringsAsFactors = FALSE)
+
+# Study 2 edge lists (optimized structure for ERGM/visualization)
+study2_edgelist_pre <- read.csv("results/edge_lists/study2_edges_pre_election.csv", stringsAsFactors = FALSE)
+study2_edgelist_post <- read.csv("results/edge_lists/study2_edges_post_formation.csv", stringsAsFactors = FALSE)
+study2_cosponsor_pre <- read.csv("results/edge_lists/study2_cosponsor_pre_election.csv", stringsAsFactors = FALSE)
+study2_cosponsor_post <- read.csv("results/edge_lists/study2_cosponsor_post_formation.csv", stringsAsFactors = FALSE)
+study2_coalition_pre <- read.csv("results/edge_lists/study2_coalition_pre_election.csv", stringsAsFactors = FALSE)
+study2_coalition_post <- read.csv("results/edge_lists/study2_coalition_post_formation.csv", stringsAsFactors = FALSE)
+
 
 # 2. CREATE NETWORKS ----------------------------------------------------------
 
-# Create nodelist from ideology data
-nodelist <- data.frame(
-  name = sort(ideology_data$party),
-  left_right = ideology_data$left_right[match(sort(ideology_data$party), ideology_data$party)],
-  conservative_progressive = ideology_data$conservative_progressive[match(sort(ideology_data$party), ideology_data$party)],
-  stringsAsFactors = FALSE
-)
+# Create nodelists from edge lists (already filtered in Python)
+study1_parties <- sort(unique(c(study1_edgelist_pre$from, study1_edgelist_pre$to, 
+                               study1_edgelist_post$from, study1_edgelist_post$to)))
+study2_parties_pre <- sort(unique(c(study2_edgelist_pre$from, study2_edgelist_pre$to)))
+study2_parties_post <- sort(unique(c(study2_edgelist_post$from, study2_edgelist_post$to)))
 
-# Create igraph networks directly
-g_pre <- igraph::graph_from_data_frame(d = edgelist_pre, vertices = nodelist, directed = FALSE)
-g_post <- igraph::graph_from_data_frame(d = edgelist_post, vertices = nodelist, directed = FALSE)
+# Create nodelists with ideology attributes
+create_nodelist <- function(party_names) {
+  data.frame(
+    name = party_names,
+    left_right = ideology_data$left_right[match(party_names, ideology_data$party)],
+    conservative_progressive = ideology_data$conservative_progressive[match(party_names, ideology_data$party)],
+    stringsAsFactors = FALSE
+  )
+}
 
-print(sprintf("  Created networks for %d parties", nrow(nodelist)))
+nodelist_study1 <- create_nodelist(study1_parties)
+nodelist_pre_study2 <- create_nodelist(study2_parties_pre)
+nodelist_post_study2 <- create_nodelist(study2_parties_post)
 
-# Create fully connected adjacency matrices (required for QAP and GERGM)
-adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre, attr = "weight", sparse = FALSE)
-adj_matrix_post <- igraph::as_adjacency_matrix(g_post, attr = "weight", sparse = FALSE)
+
+# Create networks directly from pre-filtered edge lists
+g_pre_study1 <- igraph::graph_from_data_frame(d = study1_edgelist_pre, vertices = nodelist_study1, directed = FALSE)
+g_post_study1 <- igraph::graph_from_data_frame(d = study1_edgelist_post, vertices = nodelist_study1, directed = FALSE)
+
+g_pre_study2 <- igraph::graph_from_data_frame(d = study2_edgelist_pre, vertices = nodelist_pre_study2, directed = FALSE)
+g_post_study2 <- igraph::graph_from_data_frame(d = study2_edgelist_post, vertices = nodelist_post_study2, directed = FALSE)
+
+# Remove self-loops from all networks
+g_pre_study1 <- igraph::simplify(g_pre_study1, remove.multiple = FALSE, remove.loops = TRUE)
+g_post_study1 <- igraph::simplify(g_post_study1, remove.multiple = FALSE, remove.loops = TRUE)
+g_pre_study2 <- igraph::simplify(g_pre_study2, remove.multiple = FALSE, remove.loops = TRUE)
+g_post_study2 <- igraph::simplify(g_post_study2, remove.multiple = FALSE, remove.loops = TRUE)
+
+# Create fully connected adjacency matrices for Study 1 (QAP requires identical node structure)
+adj_matrix_pre <- igraph::as_adjacency_matrix(g_pre_study1, attr = "weight", sparse = FALSE)
+adj_matrix_post <- igraph::as_adjacency_matrix(g_post_study1, attr = "weight", sparse = FALSE)
 
 # Set 0 values to 1e-6 to make fully connected (but keep diagonal as 0)
 adj_matrix_pre[adj_matrix_pre == 0] <- 1e-6
@@ -50,7 +76,7 @@ adj_matrix_post[adj_matrix_post == 0] <- 1e-6
 diag(adj_matrix_pre) <- 0
 diag(adj_matrix_post) <- 0
 
-# Create fully connected networks
+# Create fully connected networks for Study 1 (QAP)
 g_pre_connected <- igraph::graph_from_adjacency_matrix(adj_matrix_pre, 
                                                        mode = "undirected", 
                                                        weighted = TRUE)
@@ -58,19 +84,57 @@ g_post_connected <- igraph::graph_from_adjacency_matrix(adj_matrix_post,
                                                         mode = "undirected", 
                                                         weighted = TRUE)
 
-# Vertex names are already set from nodelist
 
-print(sprintf("  Pre-election: %d nodes, %d edges (fully connected)", 
-              nrow(nodelist), snafun::count_edges(g_pre_connected)))
-print(sprintf("  Post-formation: %d nodes, %d edges (fully connected)", 
-              nrow(nodelist), snafun::count_edges(g_post_connected)))
-print("")
+# 3. AGREEMENT RATE DISTRIBUTION ANALYSIS (for threshold determination) ------
 
-# 3. VISUALIZATIONS -----------------------------------------------------------
+# Extract edge weights from Study 2 networks (should now be agreement rates 0-1)
+original_weights_pre <- snafun::extract_edge_attribute(g_pre_study2, "weight")
+original_weights_post <- snafun::extract_edge_attribute(g_post_study2, "weight")
+
+# Convert to agreement rates as percentages (multiply fractions by 100)
+agreement_rates_pre <- original_weights_pre * 100
+agreement_rates_post <- original_weights_post * 100
+
+# Calculate basic statistics
+stats_pre <- list(
+  mean = mean(agreement_rates_pre),
+  median = median(agreement_rates_pre),
+  q1 = quantile(agreement_rates_pre, 0.25),
+  q3 = quantile(agreement_rates_pre, 0.75)
+)
+
+stats_post <- list(
+  mean = mean(agreement_rates_post),
+  median = median(agreement_rates_post),
+  q1 = quantile(agreement_rates_post, 0.25),
+  q3 = quantile(agreement_rates_post, 0.75)
+)
+
+# Display statistics for threshold decision
+print("Agreement rate statistics:")
+print(sprintf("PRE-ELECTION:  Mean=%.1f%%, Median=%.1f%%, Q1=%.1f%%, Q3=%.1f%%", 
+              stats_pre$mean, stats_pre$median, stats_pre$q1, stats_pre$q3))
+print(sprintf("POST-FORMATION: Mean=%.1f%%, Median=%.1f%%, Q1=%.1f%%, Q3=%.1f%%", 
+              stats_post$mean, stats_post$median, stats_post$q1, stats_post$q3))
+
+# Create simple agreement rate distribution plots
+pdf("results/visualizations/agreement_distributions_simple.pdf", width = 10, height = 5)
+par(mfrow = c(1, 2))
+
+hist(agreement_rates_pre, breaks = 10, main = "Pre-Election Agreement Rates", 
+     xlab = "Agreement Rate (%)", ylab = "Frequency", col = "skyblue", border = "black")
+abline(v = stats_pre$median, col = "red", lwd = 4)
+
+hist(agreement_rates_post, breaks = 10, main = "Post-Formation Agreement Rates",
+     xlab = "Agreement Rate (%)", ylab = "Frequency", col = "lightcoral", border = "black")
+abline(v = stats_post$median, col = "red", lwd = 4)
+
+dev.off()
+
+# 4. VISUALIZATIONS -----------------------------------------------------------
 
 # Ideology correlation plot
 pearson_test <- stats::cor.test(ideology_data$left_right, ideology_data$conservative_progressive, method = "pearson")
-print(sprintf("  Ideology correlation: r = %.3f (p = %.4f)", pearson_test$estimate, pearson_test$p.value))
 
 pdf("results/visualizations/ideology_correlation.pdf", width = 8, height = 6)
 plot(ideology_data$left_right, ideology_data$conservative_progressive,
@@ -82,33 +146,25 @@ text(ideology_data$left_right, ideology_data$conservative_progressive,
      labels = ideology_data$party, pos = 3, cex = 0.7)
 dev.off()
 
-# Network visualization
-g_pre_viz <- igraph::graph_from_data_frame(d = edgelist_pre, vertices = nodelist, directed = FALSE)
-g_post_viz <- igraph::graph_from_data_frame(d = edgelist_post, vertices = nodelist, directed = FALSE)
+# Network visualization (use Study 2 networks for better visual clarity)
+g_pre_viz <- g_pre_study2
+g_post_viz <- g_post_study2
 
-# Add party type for coloring
-party_type <- ifelse(
-  nodelist$name %in% c("BIJ1", "PvdD", "GroenLinks", "PvdA", "GroenLinks-PvdA", "DENK", "SP", "ChristenUnie", "50PLUS"), "Left",
-  ifelse(nodelist$name %in% c("Volt", "D66", "NSC", "BBB"), "Center", "Right")
+# Add party type for coloring based on left_right values from political_axes_data.csv
+party_type_pre <- ifelse(
+  nodelist_pre_study2$left_right <= -0.3, "Left",    # Left: left_right <= -0.3
+  ifelse(nodelist_pre_study2$left_right >= 0.2, "Right", "Center")  # Right: left_right >= 0.2, Center: in between
 )
-igraph::V(g_pre_viz)$party_type <- party_type
-igraph::V(g_post_viz)$party_type <- party_type
-
-# Ideology position for layout
-ideology_pos <- ifelse(
-  nodelist$name %in% c("BIJ1", "PvdD", "GroenLinks", "PvdA", "GroenLinks-PvdA", "DENK", "SP"), 1,
-  ifelse(nodelist$name %in% c("ChristenUnie", "50PLUS", "Volt", "D66", "NSC", "Omtzigt"), 2,
-  ifelse(nodelist$name %in% c("BBB", "PVV", "CDA"), 3,
-  ifelse(nodelist$name %in% c("VVD", "SGP"), 4, 5)))
+party_type_post <- ifelse(
+  nodelist_post_study2$left_right <= -0.3, "Left",    # Left: left_right <= -0.3
+  ifelse(nodelist_post_study2$left_right >= 0.2, "Right", "Center")  # Right: left_right >= 0.2, Center: in between
 )
 
-# Create layout
+igraph::V(g_pre_viz)$party_type <- party_type_pre
+igraph::V(g_post_viz)$party_type <- party_type_post
+
+# Use default igraph layout for network positioning
 set.seed(42)
-layout_coords <- matrix(0, nrow = nrow(nodelist), ncol = 2)
-for(i in seq_len(nrow(nodelist))) {
-  layout_coords[i, 1] <- ideology_pos[i] + stats::runif(1, -0.3, 0.3)
-  layout_coords[i, 2] <- stats::runif(1, -1, 1)
-}
 
 # Colors and visualization
 party_colors <- c("Left" = "#E74C3C", "Center" = "#F39C12", "Right" = "#3498DB")
@@ -117,85 +173,97 @@ igraph::V(g_post_viz)$color <- party_colors[igraph::V(g_post_viz)$party_type]
 igraph::V(g_pre_viz)$size <- pmax(8, sqrt(igraph::degree(g_pre_viz)) * 4)
 igraph::V(g_post_viz)$size <- pmax(8, sqrt(igraph::degree(g_post_viz)) * 4)
 
-if(snafun::count_edges(g_pre_viz) > 0) {
-  igraph::E(g_pre_viz)$width <- pmax(0.5, (igraph::E(g_pre_viz)$weight / max(igraph::E(g_pre_viz)$weight)) * 3)
-  threshold_pre <- mean(igraph::E(g_pre_viz)$weight) * 1.3
-  igraph::E(g_pre_viz)$color <- ifelse(igraph::E(g_pre_viz)$weight >= threshold_pre,
-                                       grDevices::rgb(0.3, 0.3, 0.3, 0.8),
-                                       grDevices::rgb(0.5, 0.5, 0.5, 0.15))
-}
+# Style pre-election network edges
+edge_weights_pre <- snafun::extract_edge_attribute(g_pre_viz, "weight")
+igraph::E(g_pre_viz)$width <- pmax(0.5, (edge_weights_pre / max(edge_weights_pre)) * 3)
+threshold_pre <- stats_pre$q3 / 100  # Convert Q3 from percentage back to fraction
+igraph::E(g_pre_viz)$color <- ifelse(edge_weights_pre >= threshold_pre,
+                                     grDevices::rgb(0.3, 0.3, 0.3, 0.8),
+                                     grDevices::rgb(0.5, 0.5, 0.5, 0.15))
 
-if(snafun::count_edges(g_post_viz) > 0) {
-  igraph::E(g_post_viz)$width <- pmax(0.5, (igraph::E(g_post_viz)$weight / max(igraph::E(g_post_viz)$weight)) * 3)
-  threshold_post <- mean(igraph::E(g_post_viz)$weight) * 1.3
-  igraph::E(g_post_viz)$color <- ifelse(igraph::E(g_post_viz)$weight >= threshold_post,
-                                        grDevices::rgb(0.3, 0.3, 0.3, 0.8),
-                                        grDevices::rgb(0.5, 0.5, 0.5, 0.15))
-}
+# Style post-formation network edges
+edge_weights_post <- snafun::extract_edge_attribute(g_post_viz, "weight")
+igraph::E(g_post_viz)$width <- pmax(0.5, (edge_weights_post / max(edge_weights_post)) * 3)
+threshold_post <- stats_post$q3 / 100  # Convert Q3 from percentage back to fraction
+igraph::E(g_post_viz)$color <- ifelse(edge_weights_post >= threshold_post,
+                                      grDevices::rgb(0.3, 0.3, 0.3, 0.8),
+                                      grDevices::rgb(0.5, 0.5, 0.5, 0.15))
 
-# Plot networks
+# Plot networks (Study 2 networks for visualization)
 pdf("results/visualizations/network_comparison.pdf", width = 14, height = 7)
 par(mfrow = c(1, 2), mar = c(2, 2, 4, 2))
-plot(g_pre_viz, layout = layout_coords, vertex.label.cex = 0.7, vertex.label.color = "black",
-     vertex.frame.color = "white", main = "PRE-ELECTION\n(Nov 22, 2022 - Nov 21, 2023)")
-plot(g_post_viz, layout = layout_coords, vertex.label.cex = 0.7, vertex.label.color = "black",
-     vertex.frame.color = "white", main = "POST-FORMATION\n(Jul 5, 2024 - Jul 4, 2025)")
+plot(g_pre_viz, vertex.label.cex = 0.7, vertex.label.color = "black",
+     vertex.frame.color = "white", main = "PRE-ELECTION (Study 2 Networks)\n(Nov 22, 2022 - Nov 21, 2023)")
+plot(g_post_viz, vertex.label.cex = 0.7, vertex.label.color = "black",
+     vertex.frame.color = "white", main = "POST-FORMATION (Study 2 Networks)\n(Jul 5, 2024 - Jul 4, 2025)")
 dev.off()
 
-print("  Ideology correlation plot saved to results/visualizations/ideology_correlation.pdf")
-print("  Network comparison plot saved to results/visualizations/network_comparison.pdf")
-print("")
 
-# 4. ADD ATTRIBUTES FOR GERGM ------------------------------------------------
+# 5. ADD ATTRIBUTES FOR STUDY 2 NETWORKS -------------------------------------
 
-# Ideology attributes are already in the nodelist, just copy to networks
-g_study2_pre <- g_pre_connected
-g_study2_post <- g_post_connected
+# Study 2: Create binarized networks with Q3 and Mean thresholds for ERGMs
+threshold_pre_q3 <- stats_pre$q3 / 100
+threshold_pre_mean <- stats_pre$mean / 100
+threshold_post_q3 <- stats_post$q3 / 100
+threshold_post_mean <- stats_post$mean / 100
 
-# The left_right attribute is already available from nodelist creation
+
+# Create 4 binarized networks for ERGMs (reusing edge weights from earlier)
+# Pre-election Q3 threshold
+g_pre_q3 <- igraph::subgraph_from_edges(g_pre_study2, 
+                                        igraph::E(g_pre_study2)[original_weights_pre >= threshold_pre_q3], 
+                                        delete.vertices = FALSE)
+igraph::E(g_pre_q3)$weight <- 1  # Binarize
+
+# Pre-election Mean threshold  
+g_pre_mean <- igraph::subgraph_from_edges(g_pre_study2,
+                                          igraph::E(g_pre_study2)[original_weights_pre >= threshold_pre_mean],
+                                          delete.vertices = FALSE)
+igraph::E(g_pre_mean)$weight <- 1  # Binarize
+
+# Post-formation Q3 threshold
+g_post_q3 <- igraph::subgraph_from_edges(g_post_study2,
+                                         igraph::E(g_post_study2)[original_weights_post >= threshold_post_q3],
+                                         delete.vertices = FALSE)
+igraph::E(g_post_q3)$weight <- 1  # Binarize
+
+# Post-formation Mean threshold
+g_post_mean <- igraph::subgraph_from_edges(g_post_study2,
+                                           igraph::E(g_post_study2)[original_weights_post >= threshold_post_mean],
+                                           delete.vertices = FALSE)
+igraph::E(g_post_mean)$weight <- 1  # Binarize
 
 # Add edge attributes (co-sponsorship and coalition)
-add_edge_attribute <- function(g_voting, edgelist_attribute, attr_name) {
-  edges_voting <- igraph::as_data_frame(g_voting, what = "edges")
+# Create covariate matrices directly (cleaner approach like final_ergm.R)
+create_covariate_matrix <- function(edgelist, nodelist) {
+  # Initialize empty matrix
+  n <- length(nodelist)
+  matrix <- matrix(0, nrow = n, ncol = n)
+  rownames(matrix) <- nodelist
+  colnames(matrix) <- nodelist
   
-  # Initialize all attribute values to 0
-  edges_voting[[attr_name]] <- 0
-  
-  # If there are attributes to add, match them
-  if(nrow(edgelist_attribute) > 0) {
-    # Create canonical pairs for both
-    voting_pairs <- paste(pmin(edges_voting$from, edges_voting$to),
-                         pmax(edges_voting$from, edges_voting$to), sep = "_")
-    attr_pairs <- paste(pmin(edgelist_attribute$from, edgelist_attribute$to),
-                       pmax(edgelist_attribute$from, edgelist_attribute$to), sep = "_")
-    
-    # Match and assign
-    matches <- match(voting_pairs, attr_pairs)
-    edges_voting[[attr_name]][!is.na(matches)] <- edgelist_attribute$weight[matches[!is.na(matches)]]
+  # Fill matrix from edge list
+  if(nrow(edgelist) > 0) {
+    for(i in seq_len(nrow(edgelist))) {
+      from_idx <- which(nodelist == edgelist$from[i])
+      to_idx <- which(nodelist == edgelist$to[i])
+      if(length(from_idx) > 0 && length(to_idx) > 0) {
+        matrix[from_idx, to_idx] <- edgelist$weight[i]
+        matrix[to_idx, from_idx] <- edgelist$weight[i]  # Symmetric for undirected
+      }
+    }
   }
   
-  # Recreate graph and copy vertex attributes
-  g_with_attr <- igraph::graph_from_data_frame(edges_voting, directed = FALSE, vertices = igraph::V(g_voting)$name)
-  for(attr in igraph::list.vertex.attributes(g_voting)) {
-    if(attr != "name") igraph::vertex_attr(g_with_attr, attr) <- igraph::vertex_attr(g_voting, attr)
-  }
-  
-  return(g_with_attr)
+  return(matrix)
 }
 
-# Add co-sponsorship and coalition edge attributes
-g_study2_pre <- add_edge_attribute(g_study2_pre, edgelist_cosponsor_pre, "cosponsor_count")
-g_study2_pre <- add_edge_attribute(g_study2_pre, coalition_edgelist, "coalition_count")
+# Create covariate matrices for all networks
+cosponsor_matrix_pre <- create_covariate_matrix(study2_cosponsor_pre, nodelist_pre_study2$name)
+coalition_matrix_pre <- create_covariate_matrix(study2_coalition_pre, nodelist_pre_study2$name)
+cosponsor_matrix_post <- create_covariate_matrix(study2_cosponsor_post, nodelist_post_study2$name)
+coalition_matrix_post <- create_covariate_matrix(study2_coalition_post, nodelist_post_study2$name)
 
-g_study2_post <- add_edge_attribute(g_study2_post, edgelist_cosponsor_post, "cosponsor_count")
-g_study2_post <- add_edge_attribute(g_study2_post, coalition_edgelist, "coalition_count")
-
-print("  Ideology attributes added to vertices")
-print("  Co-sponsorship and coalition attributes added to edges")
-print("  Networks ready for GERGM analysis")
-print("")
-
-# 5. QAP ANALYSIS -------------------------------------------------------------
+# 6. QAP ANALYSIS -------------------------------------------------------------
 
 # QAP correlation test
 set.seed(12345)
@@ -212,28 +280,112 @@ suppressWarnings({
 
 # Use built-in summary method from sna package
 qap_summary <- summary(qap_result)
-print("  QAP Test Summary:")
-print(qap_summary)
+qap_summary
 
-# Calculate p-value manually since sna summary structure may vary
-observed_corr <- qap_result$testval
-p_value_one_tailed <- mean(qap_result$dist >= qap_result$testval)
-p_value_two_tailed <- 2 * min(p_value_one_tailed, 1 - p_value_one_tailed)
+# Create QAP plot showing distribution and observed value
+pdf("results/visualizations/qap_results.pdf", width = 8, height = 6)
+plot(qap_result)
+dev.off()
 
-print(sprintf("  Observed correlation: %.4f", observed_corr))
-print(sprintf("  P-value (two-tailed): %.4f", p_value_two_tailed))
+save(qap_result, qap_summary, file = "results/statistics/qap_results.RData")
 
-if(p_value_two_tailed < 0.05) {
-  interpretation <- "Networks are significantly similar"
-  print("  Interpretation: Networks are significantly similar (p < 0.05)")
-} else {
-  interpretation <- "Networks differ significantly"
-  print("  Interpretation: Networks differ significantly (p >= 0.05)")
+# 7. ERGM ANALYSIS (after threshold selection) ----------------------------
+
+# Convert binarized networks to network objects for ERGM
+net_pre_q3 <- network::as.network(igraph::as_adjacency_matrix(g_pre_q3, sparse = FALSE), directed = FALSE)
+net_pre_mean <- network::as.network(igraph::as_adjacency_matrix(g_pre_mean, sparse = FALSE), directed = FALSE)
+net_post_q3 <- network::as.network(igraph::as_adjacency_matrix(g_post_q3, sparse = FALSE), directed = FALSE)
+net_post_mean <- network::as.network(igraph::as_adjacency_matrix(g_post_mean, sparse = FALSE), directed = FALSE)
+
+# Add vertex attributes
+network::set.vertex.attribute(net_pre_q3, "left_right", nodelist_pre_study2$left_right)
+network::set.vertex.attribute(net_pre_mean, "left_right", nodelist_pre_study2$left_right)
+network::set.vertex.attribute(net_post_q3, "left_right", nodelist_post_study2$left_right)
+network::set.vertex.attribute(net_post_mean, "left_right", nodelist_post_study2$left_right)
+
+# ERGM control parameters
+ergm_control <- ergm::control.ergm(
+  MCMC.burnin = 7000,
+  MCMC.samplesize = 20000,
+  MCMC.interval = 1500,
+  seed = 1234,
+  MCMLE.maxit = 40,
+  parallel = 5,
+  parallel.type = "PSOCK",
+  MCMC.prop = ~sparse + .triadic
+)
+
+print("Running 4 Final ERGMs:")
+set.seed(1234)
+
+# Final Model 1: Pre-election Q3 threshold
+FinalModel_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ 
+    edges + absdiff("left_right") +
+    kstar(3) + edgecov(cosponsor_matrix_pre) + 
+    gwesp(0.5, fixed = TRUE),
+  control = ergm_control
+)
+
+# Final Model 2: Pre-election Mean threshold
+FinalModel_pre_mean <- ergm::ergm(
+  net_pre_mean ~ 
+    edges + absdiff("left_right") +
+    kstar(3) + edgecov(cosponsor_matrix_pre) + 
+    gwesp(0.5, fixed = TRUE),
+  control = ergm_control
+)
+
+# Final Model 3: Post-formation Q3 threshold  
+FinalModel_post_q3 <- ergm::ergm(
+  net_post_q3 ~ 
+    edges + absdiff("left_right") +
+    kstar(3) + edgecov(cosponsor_matrix_post) + 
+    gwesp(0.5, fixed = TRUE),
+  control = ergm_control
+)
+
+# Final Model 4: Post-formation Mean threshold
+FinalModel_post_mean <- ergm::ergm(
+  net_post_mean ~ 
+    edges + absdiff("left_right") +
+    kstar(3) + edgecov(cosponsor_matrix_post) + 
+    gwesp(0.5, fixed = TRUE),
+  control = ergm_control
+)
+
+# Display all 4 models in comparison table
+texreg::screenreg(list(FinalModel_pre_q3, FinalModel_pre_mean, FinalModel_post_q3, FinalModel_post_mean),
+                  custom.model.names = c("Pre Q3", "Pre Mean", "Post Q3", "Post Mean"))
+
+# Save all models
+saveRDS(FinalModel_pre_q3, file = "results/models/final_ergm_pre_q3.rds")
+saveRDS(FinalModel_pre_mean, file = "results/models/final_ergm_pre_mean.rds")  
+saveRDS(FinalModel_post_q3, file = "results/models/final_ergm_post_q3.rds")
+saveRDS(FinalModel_post_mean, file = "results/models/final_ergm_post_mean.rds")
+
+# Save ERGM diagnostics (simplified)
+save_ergm_diagnostics <- function(ergm_model, output_prefix) {
+  output_dir <- "results/ergm_diagnostics"
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+  
+  # MCMC diagnostics
+  pdf(file.path(output_dir, paste0(output_prefix, "mcmc.pdf")))
+  ergm::mcmc.diagnostics(ergm_model)
+  dev.off()
+  
+  # Goodness of fit
+  pdf(file.path(output_dir, paste0(output_prefix, "gof.pdf")))
+  snafun::stat_plot_gof(ergm::gof(ergm_model))
+  dev.off()
+  
+  # Model summary
+  writeLines(capture.output(summary(ergm_model)), 
+             file.path(output_dir, paste0(output_prefix, "summary.txt")))
 }
 
-save(qap_result, qap_summary, observed_corr, p_value_two_tailed, interpretation, file = "results/statistics/qap_results.RData")
-print("  QAP results saved to results/statistics/qap_results.RData")
-print("")
-
-# 6. GERGM ANALYSIS -----------------------------------------------------------
-
+# Save diagnostics for all 4 Final ERGMs
+save_ergm_diagnostics(FinalModel_pre_q3, "final_pre_q3_")
+save_ergm_diagnostics(FinalModel_pre_mean, "final_pre_mean_")
+save_ergm_diagnostics(FinalModel_post_q3, "final_post_q3_")
+save_ergm_diagnostics(FinalModel_post_mean, "final_post_mean_")

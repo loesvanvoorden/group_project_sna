@@ -1,0 +1,13 @@
+from,to,weight
+BBB,PVV,1
+BBB,VVD,1
+CDA,ChristenUnie,4
+CDA,D66,3
+CDA,PvdA,1
+CDA,VVD,6
+ChristenUnie,D66,2
+ChristenUnie,PvdA,1
+ChristenUnie,VVD,2
+D66,VVD,3
+PvdA,VVD,1
+PVV,VVD,1
