@@ -155,18 +155,9 @@ We combine multiple datasets to examine Dutch parliamentary voting patterns.
 
 #### Primary Data
 
-Primary data are voting records scraped from the Open Data Portal of the Dutch House of Representatives [@TweedeKamerData] via automated Python API queries (October 2025). The portal integrates four sources from which we use one: Parlis (motions and voting results). We extracted votes from two periods: November 22, 2022 – November 21, 2023 (pre-election) and July 5, 2024 – July 4, 2025 (post-formation), filtering for Voor/Tegen votes only.
+Primary data are voting records scraped from the Open Data Portal of the Dutch House of Representatives (Tweede Kamer der Staten-Generaal, 2024) via automated Python API queries (October 2025). The portal integrates four sources from which we use one: Parlis (motions and voting results). We extracted votes from two periods: November 22, 2022 – November 21, 2023 (pre-election) and July 5, 2024 – July 4, 2025 (post-formation), filtering for Voor/Tegen (in Favour/Against) votes only.
 
-#### Supplementary Data
-
-Supplementary data include:
-
-1. Ideological positions from Kieskompas 2023 [@Kieskompas2023], extracted from visualizations and mapped to left-right scales (-1 to +1)
-2. Co-sponsorship relationships scraped from the same API for both periods
-3. Coalition experience manually collected from parlement.com [@kabinetsformaties], recording historical coalition frequencies between parties
-
-We construct party co-voting networks where nodes are parties and edge weights $w_{ij}$ represent the number of motions where parties $i$ and $j$ voted the same. @tbl-data-summary shows raw voting statistics: pre-election has 81,223 votes across 4,758 motions, while post-formation has 78,745 votes across 5,009 motions. @tbl-network-metrics shows network structure for Study 1 using raw (non-normalized) edge weights, which includes all 21 parties from the ideology dataset regardless of period-specific activity to enable consistent cross-period comparison. For visualization and analysis, z-score normalization is applied and inactive parties receive very low edge weights (1e-6) to maintain full connectivity without affecting the normalized edge weights of active parties. Network structure differs substantially despite similar voting volume (pre-election: 150 edges, density 0.70; post-formation: 110 edges, density 0.50), requiring z-score normalization for cross-period comparison.
-
+We construct party co-voting networks where nodes are parties and edge weights $w_{ij}$ represent voting agreement between parties $i$ and $j$. @tbl-data-summary shows raw voting statistics.
 ```{r}
 #| label: tbl-data-summary
 #| tbl-cap: "Raw Voting Data by Period"
@@ -174,51 +165,65 @@ We construct party co-voting networks where nodes are parties and edge weights $
 library(knitr)
 data_summary <- data.frame(
   Metric = c("Duration (days)", "Total Votes", "Unique Motions", 
-             "Active Parties", "Votes per Motion", "Mean Agreement Rate"),
-  Pre_Election = c("364", "81,223", "4,758", "18", "17.1", "75.7%"),
-  Post_Formation = c("365", "78,745", "5,009", "16", "15.7", "73.7%")
+             "Active Parties", "Votes per Motion"),
+  Pre_Election = c("364", "81,223", "4,758", "18", "17.1"),
+  Post_Formation = c("365", "78,745", "5,009", "16", "15.7")
 )
 kable(data_summary, align = 'lrr')
 ```
 
+Both studies exclude parties that were structurally absent or non-functional during the analysis period. We remove four parties from all networks: Omtzigt (an individual independent member, not a party faction), BIJ1 (lost parliamentary representation after the 2023 election), BVNL (no voting activity in our data), and 50PLUS (dissolved with only 2 votes in the pre-election year). 
+
+For Study 1, both networks include the remaining 17 parties with identical node structure, as required by QAP. For Study 2, we apply additional period-specific filtering to account for party mergers and formations since running parallel ERGMs does not require the same node sets, resulting in 15 parties for each period.
+
+Before determining the thresholds for binarizing the network to prepare for the ERGM analysis, we transform the raw weights into agreement rates by dividing the weights by the total number of motions in each period:
+
+$$
+w_{ij}^{\text{normalized}} = \frac{\text{Agreement Count}_{ij}}{\text{Total Motions}}
+$$
+
+This normalization produces agreement rates as fractions (0 to 1).
+
+Based on the distribution of agreement rates in both networks (see @fig-agreement-dist), two potential thresholds for binarizing the weighted network were evaluated: a threshold at the mean and a threshold at the third quartile (Q3). The theoretical rationale for this threshold selection is provided in the Appendix (@sec-threshold-rationale). @fig-networks shows the resulting network structures and in @tbl-network-metrics we see that the stricter Q3 threshold produces sparser networks compared to the mean threshold. The Q3 networks mainly differ in transitivity: the pre-election network shows highly clustered voting patterns (0.89) while the post-formation network shows more dispersed patterns (0.61).
+
+![Agreement Rate Distributions by Period. Rates are expressed as percentage of total motions in each period.](../results/visualizations/agreement_distributions_simple.pdf){#fig-agreement-dist width=100%}
+
+![Party Voting Networks by Period and Threshold. Darker edges indicate agreements above the threshold. Blue nodes represent right-wing parties, orange nodes represent centrist parties, and red nodes represent left-wing parties. ](../results/visualizations/network_comparison.pdf){#fig-networks width=100%}
+
 ```{r}
 #| label: tbl-network-metrics
-#| tbl-cap: "Network Structure Comparison"
+#| tbl-cap: "Study 2 Network Structure by Threshold (Binarized)"
 
 library(knitr)
 network_metrics <- data.frame(
-  Metric = c("Nodes (parties)", "Edges", "Density", "Mean Degree", 
-             "Components", "Mean Edge Weight"),
-  Pre_Election = c("21", "150", "0.70", "14.3", "4", "2,821"),
-  Post_Formation = c("21", "110", "0.50", "10.5", "6", "3,161")
+  Metric = c("Nodes (parties)", "Edges", "Density", "Transitivity", 
+             "Mean Degree", "Isolates"),
+  Pre_Mean = c("15", "48", "0.46", "0.68", "6.4", "0"),
+  Pre_Q3 = c("15", "27", "0.26", "0.89", "3.6", "0"),
+  Post_Mean = c("15", "57", "0.54", "0.74", "7.6", "0"),
+  Post_Q3 = c("15", "27", "0.26", "0.61", "3.6", "1")
 )
-kable(network_metrics, align = 'lrr')
+colnames(network_metrics) <- c("Metric", 
+                                "Pre (Mean 63.9%)", 
+                                "Pre (Q3 74.5%)", 
+                                "Post (Mean 61.3%)", 
+                                "Post (Q3 74.9%)")
+kable(network_metrics, align = 'lrrrr')
 ```
 
-@tbl-unanimity validates sufficient variation: 19.8-22.2% of motions are near-unanimous (>=90% one-sided), with 23.6-32.0% balanced, indicating meaningful party cooperation patterns rather than unanimous votes.
+{{< pagebreak >}}
 
-```{r}
-#| label: tbl-unanimity
-#| tbl-cap: "Vote Unanimity Statistics"
+#### Supplementary Data for Study 2
 
-library(knitr)
-unanimity_display <- data.frame(
-  Period = c("Pre-Election", "Post-Formation"),
-  Mean_Unanimity = c("75.7%", "73.7%"),
-  Near_Unanimous = c("22.2%", "19.8%"),
-  Balanced = c("23.6%", "32.0%")
-)
-names(unanimity_display) <- c("Period", "Mean Unanimity", ">=90% Unanimous", "Balanced (40-60%)")
-kable(unanimity_display, align = 'lrrr')
-```
+Supplementary data include:
 
-#### Supplementary Variables for Study 2
+1. Ideological positions from Kieskompas 2023 [@Kieskompas2023], extracted from visualizations and mapped to left-right scales (-1 to +1). More details about the data extraction methodology can be found in the Appendix (@sec-ideological-extraction).
+2. Co-sponsorship relationships scraped from the same API we used to scrape voting records.
+3. Coalition experience manually collected from parlement.com [@kabinetsformaties], recording historical coalition frequencies between parties
 
-Ideological positions from Kieskompas show strong correlation between left-right and conservative-progressive dimensions (r = -0.860), as illustrated in @fig-ideology, indicating substantial overlap. This finding validates the theoretical concern raised in the introduction that the two dimensions may be too closely intertwined. We therefore use only the left-right dimension to avoid multicollinearity.
+A notable example from the co-sponsorship data is GroenLinks-PvdA, which had extensive co-sponsorship activity that ultimately led to their formal merger in 2023 [@parlementGroenLinksPvdA]. @tbl-cosponsorship provides summary statistics for both periods. 
 
-Co-sponsorship relationships capture formal legislative cooperation where parties jointly sponsor motions, representing strategic alliances beyond voting behavior. A notable example is GroenLinks-PvdA, which had extensive co-sponsorship activity that ultimately led to their formal merger in 2023 [@parlementGroenLinksPvdA]. @tbl-cosponsorship provides network statistics for both periods. Coalition experience network contains 15 edges with mean 1.9 times (range 1-6), with CDA-VVD being the most frequent pair (6 times). Both co-sponsorship and coalition experience are included as edge attributes in the voting networks.
-
-![Ideology Dimensions Correlation](ideologyCorrelation.png){#fig-ideology width=70%}
+The coalition experience network contains 15 edges with mean 1.9 times (range 1-6), with CDA-VVD being the most frequent pair (6 times). The data extraction method for this data can also be found in the Appendix (@sec-coalition-extraction). Both co-sponsorship and coalition experience are included as edge attributes in the voting networks, ideological positions are included as node attributes. 
 
 ```{r}
 #| label: tbl-cosponsorship
@@ -233,23 +238,11 @@ cosponsorship_stats <- data.frame(
 kable(cosponsorship_stats, align = 'lrr')
 ```
 
-@fig-networks displays the z-score normalized networks, where edge prominence reflects standardized cooperation strength (z > 1.0 indicates above-average cooperation) rather than raw counts, enabling direct cross-period comparison.
-
-![Z-Score Normalized Party Networks: Pre-Election vs Post-Formation. Edge highlighting based on z > 1.0 (above-average cooperation within each period).](networkZScore.png){#fig-networks width=100%}
-
 ### Data Usefulness and Potential Biases
 
-#### Data Usefulness
+These data are well-suited for studying electoral cycle dynamics because it enables temporal analysis through its use of timestamps, actual voting behavior provides objective preferences and combining voting data with ideology, coalition experience, and co-sponsorship allows testing multiple factors driving party cooperation.
 
-These data are well-suited for studying electoral cycle dynamics because:
-
-1. Voting records contain exact timestamps enabling temporal analysis
-2. Actual voting behavior provides objective preferences
-3. Combining voting data with ideology, coalition experience, and co-sponsorship allows testing multiple factors driving party cooperation
-
-#### Potential Biases
-
-The parliamentary database has limited documentation [@Hug2010; @Mikhaylov2012], requiring careful interpretation (e.g., low vote counts reflect "pairing" agreements, not low participation). We address this by working at party-level and reading parliamentary documentation. Network structure varies substantially across periods (density 0.70 → 0.50), which we address via z-score normalization. Ideological measurement error from extracting Kieskompas coordinates [@Louwerse2012; @Bakker2015] likely affects all parties equally and is mitigated by using ideology as a predictor rather than outcome. Temporal validity concerns (2023 ideology data vs. 2024 voting) are minimal as established party positions remain relatively stable [@Gross2021].
+A potential bias is the ideological measurement error from extracting Kieskompas coordinates [@Louwerse2012; @Bakker2015], this however likely affects all parties equally and is mitigated by using ideology as a predictor rather than outcome. Temporal validity concerns (2023 ideology data vs. 2024 voting) are minimal as established party positions remain relatively stable [@Gross2021].
 
 ## Research Rationale {#sec-data-analysis}
 
@@ -264,6 +257,48 @@ The second study examines why these differences in voting agreements in the netw
 The GERGM is suitable for the research question because it can test how ideological similarity, coalition position, and structural patterns in the network influence voting agreement between parties. This makes it possible to understand the mechanisms behind voting behaviour.
 
 A bipartite ERGM was considered as an alternative, but this would model connections between parties and motions instead of direct cooperation between parties. It would also be much more complex without answering the research question as clearly. Traditional regression models were also not suitable because they assume independence between observations. So, the GERGM is the most appropriate method for study 2.
+
+{{< pagebreak >}}
+
+## Appendix A: Network Threshold Selection Rationale {#sec-threshold-rationale}
+
+The thresholds were chosen with the aim to only include edges between parties that demonstrate a meaningful level, i.e. a sufficiently high ratio, of voting agreement. Firstly, a threshold at the mean was set to capture a broad set of relationships, creating edges between parties that agree more often than the mean agreement between parties. In contrast, the Q3 threshold keeps only the highest quartile of agreement values, therefore only forming edges between parties that show higher ratios of agreement. From a theoretical perspective, the Q3 threshold is more suitable to capture meaningful relationships, since only edges are formed between parties with a high level of agreement. Still, the mean threshold is used to evaluate whether the observed patterns persist under a broader and less restrictive definition of voting agreement, thereby providing a robustness check and supporting the generalizability of the results.
+
+## Appendix B: Supplementary Data Collection {#sec-appendix-b}
+
+### Ideological Position Data Extraction {#sec-ideological-extraction}
+
+To capture the political positions of Dutch parties across the ideological spectrum, we relied on data from Kieskompas [@Kieskompas2023], a research organization dedicated to analyzing political opinions and party positioning. During election cycles, Kieskompas condenses their findings into two-dimensional visualizations showing parties' positions on the left-right (economic) and progressive-conservative (cultural) axes.
+
+Since Kieskompas does not publicly release the underlying coordinate data, we extracted numerical values from their published visualizations using plot digitization software. The primary data source was the 2023 election visualization (@fig-kieskompas-source). However, the 2023 data included GroenLinks-PvdA as a merged entity, while our pre-election analysis period (2022-2023) required separate coordinates for GroenLinks and PvdA. We therefore supplemented the 2023 data with coordinates for these two parties from previous Kieskompas election visualizations.
+
+![Kieskompas 2023 Election Visualization (Source)](Picture1.png){#fig-kieskompas-source width=60%}
+
+Coordinate extraction was performed using PlotDigitizer (plotdigitizer.com), a web-based tool for extracting numerical data from graph images. The digitization process involved:
+
+1. Uploading the Kieskompas visualization image
+2. Calibrating the x-axis (left-right dimension) and y-axis (progressive-conservative dimension) using known reference points
+3. Manually selecting each party logo's center point to extract coordinates
+4. Exporting the coordinate pairs to CSV format
+
+@fig-plotdigitizer shows the digitization interface with calibrated axes and extracted party positions. The final dataset contains coordinates for 21 parties on both ideological dimensions, which were then rescaled to the range [-1, +1] for use in our analysis.
+
+![Plot Digitization Process using PlotDigitizer.com](plotdigitizer.png){#fig-plotdigitizer width=90%}
+
+### Coalition Experience Data Collection {#sec-coalition-extraction}
+
+To capture historical coalition patterns between Dutch political parties, we collected data on cabinet formations from Parlement.com [@kabinetsformaties], an authoritative source documenting all Dutch government formations since 1945. We focused on coalitions from the last 20 years (2003-2023) to ensure relevance to current party dynamics while capturing sufficient historical cooperation patterns.
+
+The data collection process was entirely manual and involved:
+
+1. Reviewing each cabinet formation listed on https://www.parlement.com/kabinetsformaties-sinds-1945
+2. Identifying which parties participated in each coalition government within the 20-year window
+3. Recording each unique party pair that served together in a cabinet
+4. Counting the frequency of co-participation for each party pair across all coalitions
+
+The resulting dataset contains 17 unique party pairs with co-coalition frequencies ranging from 1 to 6 times. For example, CDA and VVD served together in 6 different coalition governments, making them the most frequent coalition partners in our dataset. CDA also had 4 coalitions with ChristenUnie and 3 with D66. More recent coalition formations include BBB, NSC, and PVV each serving together once with VVD in the studied (2024) cabinet.
+
+This dyadic coalition count data was structured as an undirected edge list (party A, party B, number of coalitions together) and stored in CSV format. In the ERGM analysis, this matrix serves as an edge covariate (`edgecov(coalition_matrix)`), testing whether historical coalition experience increases the likelihood of contemporary voting agreement between parties (H2.2).
 
 ## References
 

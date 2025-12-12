@@ -1,20 +1,21 @@
 Call:
 ergm::ergm(formula = net_pre_mean ~ edges + absdiff("left_right") + 
-    kstar(3) + edgecov(cosponsor_matrix_pre) + gwesp(0.5, fixed = TRUE), 
-    control = ergm_control)
+    edgecov(coalition_matrix_pre) + edgecov(cosponsor_matrix_pre) + 
+    kstar(3) + gwesp(0.75, fixed = TRUE), control = ergm_control)
 
 Monte Carlo Maximum Likelihood Results:
 
                              Estimate Std. Error MCMC % z value Pr(>|z|)    
-edges                        -3.27544    1.60678      0  -2.039 0.041498 *  
-absdiff.left_right           -1.46593    0.67690      0  -2.166 0.030338 *  
-kstar3                       -0.08700    0.03202      0  -2.717 0.006590 ** 
-edgecov.cosponsor_matrix_pre  0.03469    0.01047      0   3.314 0.000921 ***
-gwesp.fixed.0.5               2.63083    0.88704      0   2.966 0.003019 ** 
+edges                        -3.16191    1.18450      0  -2.669  0.00760 ** 
+absdiff.left_right           -1.19703    0.69358      0  -1.726  0.08437 .  
+edgecov.coalition_matrix_pre -0.64129    0.67401      0  -0.951  0.34138    
+edgecov.cosponsor_matrix_pre  0.03631    0.01353      0   2.685  0.00726 ** 
+kstar3                       -0.07982    0.02673      0  -2.986  0.00282 ** 
+gwesp.fixed.0.75              1.95175    0.50094      0   3.896  < 1e-04 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
      Null Deviance: 145.56  on 105  degrees of freedom
- Residual Deviance:  71.08  on 100  degrees of freedom
+ Residual Deviance:  70.65  on  99  degrees of freedom
  
-AIC: 81.08  BIC: 94.35  (Smaller is better. MC Std. Err. = 0.04661)
+AIC: 82.65  BIC: 98.57  (Smaller is better. MC Std. Err. = 0.09978)

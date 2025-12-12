@@ -10,10 +10,12 @@ Social network analysis of co-voting patterns between political parties in the D
 
 ```
 ├── README.md                      # This file
-├── analysis.Rmd                   # ⭐ Main analysis (R Markdown)
+├── final_analysis.R               # ⭐ Main analysis script (reproduces entire project)
+├── final_notebook.Rmd             # Alternative notebook version
 ├── report/                        # Quarto report documents
 │   ├── SNA4DSprojectTemplate2025.qmd
-│   └── r-references.bib
+│   ├── r-references.bib
+│   └── _output/                   # Rendered report files
 ├── data/                          # Raw data
 │   ├── voting_data_2023_preelection.csv
 │   ├── voting_data_clean.csv
@@ -22,13 +24,18 @@ Social network analysis of co-voting patterns between political parties in the D
 │   ├── coauthoring_data_2024_postformation.json
 │   └── nrtimes_coalition_together.csv
 ├── scripts/                       # Utility scripts
-│   └── fetch_voting_data.py
-├── oldScripts/                    # Legacy scripts (archived)
-└── results/                       # Analysis outputs
-    ├── visualizations/
-    ├── statistics/
-    ├── adjacency_matrices/
-    └── edge_lists/
+│   ├── fetch_voting_data.py      # Data fetching
+│   └── generate_edgelists.py     # Edge list preprocessing
+├── oldScripts/                    # Legacy R scripts (archived)
+├── oldNotebooks/                  # Previous analysis versions
+│   ├── analysis.Rmd
+│   └── analysis_backup.Rmd
+└── results/                       # Analysis outputs (auto-generated)
+    ├── edge_lists/                # Pre-filtered edge lists (study1_*, study2_*)
+    ├── visualizations/            # Network plots, distributions, QAP plots
+    ├── statistics/                # QAP results, network metrics
+    ├── models/                    # Saved ERGM models (.rds files)
+    └── ergm_diagnostics/          # MCMC, GOF, and model summaries
 ```
 
 ---
@@ -44,11 +51,18 @@ python3 scripts/fetch_voting_data.py
 ### 2. Run Analysis
 
 ```bash
-# Render analysis (HTML output)
-Rscript -e "rmarkdown::render('analysis.R')"
+# Run complete analysis pipeline (generates all results)
+Rscript final_analysis.R
 
-# Or open in RStudio and click "Knit"
+# Or open in RStudio and run the script
 ```
+
+**What `final_analysis.R` produces:**
+- QAP correlation analysis and plots
+- 4 ERGM models (Q3/Mean thresholds × Pre/Post periods)
+- Network visualizations and agreement rate distributions  
+- ERGM diagnostics (MCMC, GOF, summaries)
+- All results saved to `results/` directory
 
 ### 3. Render Report
 
@@ -67,11 +81,12 @@ quarto render SNA4DSprojectTemplate2025.qmd
 - **Networks:** Fully connected (all 17 parties), z-score normalized weights
 
 ### Study 2: Binarized ERGM Analysis
-- **Method:**  Binarized Exponential Random Graph Model (ERGM)
+- **Method:** Binarized Exponential Random Graph Model (ERGM)
 - **Question:** What factors predict voting agreement between parties?
-- **Networks:** Pre and post election specific (15 parties per network),
+- **Networks:** 4 models (Q3/Mean thresholds × Pre/Post periods, ~15 parties each)
 - **Vertex attributes:** `left_right` (ideology)
-- **Edge attributes:** `cosponsor_count`, `coalition_count`
+- **Edge covariates:** `cosponsor_matrix`, `coalition_matrix`
+- **Model terms:** `edges`, `absdiff("left_right")`, `kstar(3)`, `gwesp(0.5)`, `edgecov`
 
 ---
 
@@ -97,10 +112,10 @@ quarto render SNA4DSprojectTemplate2025.qmd
 
 ### R Packages
 ```r
-install.packages(c("lubridate", "igraph", "snafun", "knitr", "jsonlite"))
+install.packages(c("igraph", "snafun", "sna", "network", "ergm", "texreg"))
 ```
 
-### Python (for data fetching)
+### Python (for data fetching - optional)
 ```bash
 pip install requests pandas
 ```
@@ -112,11 +127,12 @@ pip install requests pandas
 
 ## Network Construction
 
-- **Nodes:** Political parties (17 parties)
-- **Edges:** Co-voting agreements (same vote on same motion)
-- **Edge Weight:** Number of agreements (raw) or z-score normalized
-- **Study 1:** Fully connected networks (zeros → 1e-6)
-- **Study 2:** Sparse networks containing only parties present within time window
+- **Nodes:** Political parties (Study 1: 17 parties, Study 2: ~15 parties per period)
+- **Edges:** Co-voting agreements (same vote on same motion)  
+- **Edge Weight:** Agreement rates (fraction of shared votes)
+- **Study 1:** Fully connected networks (zeros → 1e-6) for QAP analysis
+- **Study 2:** Binarized networks at Q3/Mean thresholds for ERGM analysis
+- **Pre-generated:** Edge lists already filtered and ready in `results/edge_lists/`
 
 ---
 
