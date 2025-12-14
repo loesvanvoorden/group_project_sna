@@ -636,7 +636,7 @@ To capture the political positions of Dutch parties across the ideological spect
 
 Since Kieskompas does not publicly release the underlying coordinate data, we extracted numerical values from their published visualizations using plot digitization software. The primary data source was the 2023 election visualization (@fig-kieskompas-source). However, the 2023 data included GroenLinks-PvdA as a merged entity, while our pre-election analysis period (2022-2023) required separate coordinates for GroenLinks and PvdA. We therefore supplemented the 2023 data with coordinates for these two parties from previous Kieskompas election visualizations.
 
-![Kieskompas 2023 Election Visualization (Source)](Picture1.png){#fig-kieskompas-source width=60%}
+![Kieskompas 2023 Election Visualization (Source)](kieskompas.png){#fig-kieskompas-source width=60%}
 
 Coordinate extraction was performed using PlotDigitizer (plotdigitizer.com), a web-based tool for extracting numerical data from graph images. The digitization process involved:
 

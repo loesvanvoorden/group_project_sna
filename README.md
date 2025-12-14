@@ -10,16 +10,17 @@ This repository contains code and data for analyzing co-voting patterns between 
 
 ```
 ├── README.md                      # This file
-├── final_analysis.R               # ⭐ Main analysis script (reproduces entire project)
-├── ergm_testing.R                 # Comprehensive ERGM model testing script
+├── full_analysis.R                # MAIN ANALYSIS SCRIPT (reproduces entire project)
+├── ergm_building.R                # Hierarchical model building script
 ├── report/                        # Quarto report documents
-│   ├── SNA4DSprojectTemplate2025.qmd
+│   ├── group17_report.qmd
 │   ├── r-references.bib
-│   ├── Picture1.png
+│   ├── kieskompas.png
 │   ├── plotdigitizer.png
 │   ├── building_pre.png
 │   ├── building_post.png
-│   └── apa-7th-edition.csl
+│   ├── apa-7th-edition.csl
+|   └── _output/group17_report.pdf # OUR REPORT AS PDF
 ├── data/                          # Raw data files
 │   ├── voting_data_2023_preelection.csv
 │   ├── voting_data_clean.csv
@@ -28,8 +29,8 @@ This repository contains code and data for analyzing co-voting patterns between 
 │   ├── coauthoring_data_2024_postformation.json
 │   └── nrtimes_coalition_together.csv
 ├── scripts/                       # Preprocessing and data collection scripts
-│   ├── fetch_voting_data.py      # Scrapes voting data & co-sponsoring data from Tweede Kamer API
-│   └── generate_edgelists.py     # Generates pre-filtered edge lists
+│   ├── fetch_voting_data.py       # Scrapes voting data & co-sponsoring data from Tweede Kamer API
+│   └── generate_edgelists.py      # Generates pre-filtered edge lists
 └── results/                       # Analysis outputs (auto-generated)
     ├── edge_lists/                # Pre-processed edge lists (study1_*, study2_*)
     ├── visualizations/            # Network plots, distributions, QAP plots
@@ -61,10 +62,10 @@ pip install requests pandas
 **Option A: Main Analysis (Recommended)**
 ```bash
 # Run complete analysis pipeline (generates all results)
-Rscript final_analysis.R
+Rscript full_analysis.R
 ```
 
-**What `final_analysis.R` produces:**
+**What `full_analysis.R` produces:**
 - QAP correlation test between two period networks
 - 2 final ERGM models
 - Network visualizations with fixed layouts
@@ -76,10 +77,10 @@ Rscript final_analysis.R
 **Option B: Comprehensive Model Testing (Optional)**
 ```bash
 # Run extensive stepwise model building and testing
-Rscript ergm_testing.R
+Rscript ergm_building.R
 ```
 
-**What `ergm_testing.R` produces:**
+**What `ergm_building.R` produces:**
 - 4 convergence test models (pre/post × mean/Q3 thresholds)
 - 24 stepwise models (12 for pre-election, 12 for post-formation):
   - 4 exogenous term combinations
@@ -88,7 +89,7 @@ Rscript ergm_testing.R
 - All test models saved to `results/tests/`
 - Diagnostics for convergence models in `results/ergm_diagnostics/convergence_models/`
 
-**Note:** `ergm_testing.R` is used for model development and produces the data visualized in Appendices C and G of the report. It is not required to reproduce the main results.
+**Note:** `ergm_building.R` is used for model development and produces the data visualized in Appendices C and G of the report. It is not required to reproduce the main results.
 
 ### 3. Render Report (Optional)
 
