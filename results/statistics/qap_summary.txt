@@ -1,0 +1,18 @@
+
+QAP Test Results
+
+Estimated p-values:
+	p(f(perm) >= f(d)): 0.634 
+	p(f(perm) <= f(d)): 0.366 
+
+Test Diagnostics:
+	Test Value (f(d)): -0.1184753 
+	Replications: 1000 
+	Distribution Summary:
+		Min:	 -0.2348496 
+		1stQ:	 -0.1454478 
+		Med:	 -0.08410432 
+		Mean:	 0.01496453 
+		3rdQ:	 0.2629991 
+		Max:	 0.8601872 
+

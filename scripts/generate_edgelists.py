@@ -314,7 +314,7 @@ def filter_coalition_by_period(coalition_edgelist, period="pre"):
     else:
         # Post-formation: include all coalition data
         print(f"  Post-formation: Using all {len(coalition_edgelist)} coalition edges")
-        return coalition_edgelist
+    return coalition_edgelist
 
 def filter_edgelist_by_parties(edgelist, valid_parties, edgelist_name):
     """Filter edge list to only include valid parties"""

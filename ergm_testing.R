@@ -4,6 +4,7 @@
 if(!dir.exists("results/statistics")) dir.create("results/statistics", recursive = TRUE)
 if(!dir.exists("results/visualizations")) dir.create("results/visualizations", recursive = TRUE)
 if(!dir.exists("results/models")) dir.create("results/models", recursive = TRUE)
+if(!dir.exists("results/tests")) dir.create("results/tests", recursive = TRUE)
 
 # 1. LOAD DATA ----------------------------------------------------------------
 
@@ -122,110 +123,7 @@ stats_post <- list(
   q3 = quantile(agreement_rates_post, 0.75)
 )
 
-# Create simple agreement rate distribution plots
-pdf("results/visualizations/agreement_distributions_simple.pdf", width = 10, height = 5)
-par(mfrow = c(1, 2))
-
-hist(agreement_rates_pre, breaks = 15, main = "Pre-Election", 
-     xlab = "Agreement Rate (%)", ylab = "Frequency", col = "lightblue", border = "black")
-abline(v = c(stats_pre$q1, stats_pre$mean, stats_pre$q3), 
-       col = c("blue", "red", "blue"), lwd = 2, lty = c(2, 1, 2))
-legend("topright", c("Q1/Q3", "Mean"), col = c("blue", "red"), 
-       lty = c(2, 1), lwd = 2, cex = 0.8)
-
-hist(agreement_rates_post, breaks = 15, main = "Post-Formation", 
-     xlab = "Agreement Rate (%)", ylab = "Frequency", col = "lightcoral", border = "black")
-abline(v = c(stats_post$q1, stats_post$mean, stats_post$q3), 
-       col = c("blue", "red", "blue"), lwd = 2, lty = c(2, 1, 2))
-legend("topright", c("Q1/Q3", "Mean"), col = c("blue", "red"), 
-       lty = c(2, 1), lwd = 2, cex = 0.8)
-
-dev.off()
-
-# 5. VISUALIZATIONS -----------------------------------------------------------
-
-# Ideology correlation plot
-pearson_test <- stats::cor.test(ideology_data$left_right, ideology_data$conservative_progressive, method = "pearson")
-
-pdf("results/visualizations/ideology_correlation.pdf", width = 8, height = 6)
-plot(ideology_data$left_right, ideology_data$conservative_progressive,
-     xlab = "Left-Right", ylab = "Conservative-Progressive",
-     main = sprintf("Ideology Dimensions (r = %.3f)", pearson_test$estimate),
-     pch = 19, col = "steelblue")
-abline(lm(conservative_progressive ~ left_right, data = ideology_data), col = "red", lwd = 2)
-text(ideology_data$left_right, ideology_data$conservative_progressive, 
-     labels = ideology_data$party, pos = 3, cex = 0.7)
-dev.off()
-
-# Network visualization with 4 networks (2 periods x 2 thresholds)
-# Colors and party type setup
-party_colors <- c("Left" = "#E74C3C", "Center" = "#F39C12", "Right" = "#3498DB")
-
-party_type_pre <- ifelse(
-  nodelist_pre_study2$left_right <= -0.3, "Left",
-  ifelse(nodelist_pre_study2$left_right >= 0.2, "Right", "Center")
-)
-party_type_post <- ifelse(
-  nodelist_post_study2$left_right <= -0.3, "Left",
-  ifelse(nodelist_post_study2$left_right >= 0.2, "Right", "Center")
-)
-
-# Helper function to style network with threshold
-style_network <- function(g, edge_weights, threshold, party_type) {
-  igraph::V(g)$party_type <- party_type
-  igraph::V(g)$color <- party_colors[igraph::V(g)$party_type]
-  igraph::V(g)$size <- pmax(8, sqrt(igraph::degree(g)) * 4)
-  
-  igraph::E(g)$width <- pmax(0.5, (edge_weights / max(edge_weights)) * 3)
-  igraph::E(g)$color <- ifelse(edge_weights >= threshold,
-                                grDevices::rgb(0.3, 0.3, 0.3, 0.8),
-                                grDevices::rgb(0.5, 0.5, 0.5, 0.15))
-  return(g)
-}
-
-# Create 4 styled networks
-set.seed(42)
-edge_weights_pre <- snafun::extract_edge_attribute(g_pre_study2, "weight")
-edge_weights_post <- snafun::extract_edge_attribute(g_post_study2, "weight")
-
-g_pre_mean_viz <- style_network(g_pre_study2, edge_weights_pre, 
-                                  stats_pre$mean / 100, party_type_pre)
-g_pre_q3_viz <- style_network(g_pre_study2, edge_weights_pre, 
-                               stats_pre$q3 / 100, party_type_pre)
-g_post_mean_viz <- style_network(g_post_study2, edge_weights_post, 
-                                   stats_post$mean / 100, party_type_post)
-g_post_q3_viz <- style_network(g_post_study2, edge_weights_post, 
-                                stats_post$q3 / 100, party_type_post)
-
-# Create a fixed layout for consistent node positions across all plots
-# Use Fruchterman-Reingold on the pre-election network as reference
-set.seed(42)
-fixed_layout <- igraph::layout_with_fr(g_pre_study2)
-
-# Plot 4 networks in 2x2 grid (Pre on left, Post on right) with fixed layout
-pdf("results/visualizations/network_comparison.pdf", width = 14, height = 14)
-par(mfrow = c(2, 2), mar = c(2, 2, 4, 2))
-
-plot(g_pre_mean_viz, vertex.label.cex = 0.6, vertex.label.color = "black",
-     vertex.frame.color = "white", layout = fixed_layout,
-     main = sprintf("PRE-ELECTION (Mean Threshold: %.1f%%)\n(Nov 22, 2022 - Nov 21, 2023)", stats_pre$mean))
-
-plot(g_post_mean_viz, vertex.label.cex = 0.6, vertex.label.color = "black",
-     vertex.frame.color = "white", layout = fixed_layout,
-     main = sprintf("POST-FORMATION (Mean Threshold: %.1f%%)\n(Jul 5, 2024 - Jul 4, 2025)", stats_post$mean))
-
-plot(g_pre_q3_viz, vertex.label.cex = 0.6, vertex.label.color = "black",
-     vertex.frame.color = "white", layout = fixed_layout,
-     main = sprintf("PRE-ELECTION (Q3 Threshold: %.1f%%)\n(Nov 22, 2022 - Nov 21, 2023)", stats_pre$q3))
-
-plot(g_post_q3_viz, vertex.label.cex = 0.6, vertex.label.color = "black",
-     vertex.frame.color = "white", layout = fixed_layout,
-     main = sprintf("POST-FORMATION (Q3 Threshold: %.1f%%)\n(Jul 5, 2024 - Jul 4, 2025)", stats_post$q3))
-
-dev.off()
-
-
-# 6. ADD ATTRIBUTES FOR STUDY 2 NETWORKS -------------------------------------
+# 5. ADD ATTRIBUTES FOR STUDY 2 NETWORKS -------------------------------------
 
 # Study 2: Create binarized networks with Q3 and Mean thresholds for ERGMs
 threshold_pre_q3 <- stats_pre$q3 / 100
@@ -289,36 +187,7 @@ coalition_matrix_pre <- create_covariate_matrix(study2_coalition_pre, nodelist_p
 cosponsor_matrix_post <- create_covariate_matrix(study2_cosponsor_post, nodelist_post_study2$name)
 coalition_matrix_post <- create_covariate_matrix(study2_coalition_post, nodelist_post_study2$name)
 
-# 7. QAP ANALYSIS -------------------------------------------------------------
-
-# QAP correlation test
-set.seed(12345)
-observed_corr <- sna::gcor(adj_matrix_pre, adj_matrix_post)
-
-suppressWarnings({
-  qap_result <- sna::qaptest(
-    list(adj_matrix_pre, adj_matrix_post),
-    FUN = sna::gcor,
-    reps = 1000,
-    g1 = 1, g2 = 2
-  )
-})
-
-# Use built-in summary method from sna package
-qap_summary <- summary(qap_result)
-
-# Create QAP plot showing distribution and observed value
-pdf("results/visualizations/qap_results.pdf", width = 8, height = 6)
-plot(qap_result)
-dev.off()
-
-# Save summary to text file
-writeLines(capture.output(summary(qap_result)), 
-           "results/statistics/qap_summary.txt")
-
-save(qap_result, qap_summary, file = "results/statistics/qap_results.RData")
-
-# 8. ERGM ANALYSIS (after threshold selection) ----------------------------
+# 6. ERGM ANALYSIS (after threshold selection) ----------------------------
 
 # Convert binarized networks to network objects for ERGM
 net_pre_q3 <- network::as.network(igraph::as_adjacency_matrix(g_pre_q3, sparse = FALSE), directed = FALSE)
@@ -344,30 +213,57 @@ ergm_control <- ergm::control.ergm(
   MCMC.prop = ~sparse + .triadic
 )
 
-# Final Models (Q3 threshold, decay 0.75)
-FinalModel_pre_q3 <- ergm::ergm(
+# Convergence Test Models (decay 0.7)
+Model1_pre_q3 <- ergm::ergm(
   net_pre_q3 ~ 
     edges + absdiff("left_right") + 
     edgecov(coalition_matrix_pre) + edgecov(cosponsor_matrix_pre) +
-    kstar(3) + gwesp(0.75, fixed = TRUE),
+    kstar(3) + gwesp(0.7, fixed = TRUE),
   control = ergm_control
 )
 
-FinalModel_post_q3 <- ergm::ergm(
+Model2_pre_mean <- ergm::ergm(
+  net_pre_mean ~ 
+    edges + absdiff("left_right") + 
+    edgecov(coalition_matrix_pre) + edgecov(cosponsor_matrix_pre) +
+    kstar(3) + gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+Model3_post_q3 <- ergm::ergm(
   net_post_q3 ~ 
     edges + absdiff("left_right") + 
     edgecov(coalition_matrix_post) + edgecov(cosponsor_matrix_post) +
-    kstar(3) + gwesp(0.75, fixed = TRUE),
+    kstar(3) + gwesp(0.7, fixed = TRUE),
   control = ergm_control
 )
 
-# Save final models
-saveRDS(FinalModel_pre_q3, file = "results/models/final_ergm_pre_q3.rds")
-saveRDS(FinalModel_post_q3, file = "results/models/final_ergm_post_q3.rds")
+Model4_post_mean <- ergm::ergm(
+  net_post_mean ~ 
+    edges + absdiff("left_right") + 
+    edgecov(coalition_matrix_post) + edgecov(cosponsor_matrix_post) +
+    kstar(3) + gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+# Model comparison: AIC/BIC for threshold selection
+model_comparison <- data.frame(
+  Model = c("Pre Q3 (0.7)", "Pre Mean (0.7)", "Post Q3 (0.7)", "Post Mean (0.7)"),
+  AIC = c(AIC(Model1_pre_q3), AIC(Model2_pre_mean), 
+          AIC(Model3_post_q3), AIC(Model4_post_mean)),
+  BIC = c(BIC(Model1_pre_q3), BIC(Model2_pre_mean), 
+          BIC(Model3_post_q3), BIC(Model4_post_mean))
+)
+
+# Save convergence test models
+saveRDS(Model1_pre_q3, file = "results/tests/convergence_pre_q3.rds")
+saveRDS(Model2_pre_mean, file = "results/tests/convergence_pre_mean.rds")
+saveRDS(Model3_post_q3, file = "results/tests/convergence_post_q3.rds")
+saveRDS(Model4_post_mean, file = "results/tests/convergence_post_mean.rds")
 
 # Save ERGM diagnostics
 save_ergm_diagnostics <- function(ergm_model, output_prefix) {
-  output_dir <- "results/ergm_diagnostics"
+  output_dir <- "results/ergm_diagnostics/convergence_models"
   if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
   
   # MCMC diagnostics
@@ -385,6 +281,202 @@ save_ergm_diagnostics <- function(ergm_model, output_prefix) {
              file.path(output_dir, paste0(output_prefix, "summary.txt")))
 }
 
-# Save diagnostics for final models
-save_ergm_diagnostics(FinalModel_pre_q3, "final_pre_q3_")
-save_ergm_diagnostics(FinalModel_post_q3, "final_post_q3_")
+# Save diagnostics for convergence test models
+save_ergm_diagnostics(Model1_pre_q3, "convergence_pre_q3_")
+save_ergm_diagnostics(Model2_pre_mean, "convergence_pre_mean_")
+save_ergm_diagnostics(Model3_post_q3, "convergence_post_q3_")
+save_ergm_diagnostics(Model4_post_mean, "convergence_post_mean_")
+
+# 7. STEPWISE MODEL BUILDING FOR PRE-ELECTION Q3 NETWORK ---------------------
+
+# Table 1: Testing exogenous terms
+Exog1_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right"),
+  control = ergm_control
+)
+
+Exog2_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + edgecov(cosponsor_matrix_pre),
+  control = ergm_control
+)
+
+Exog3_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + edgecov(coalition_matrix_pre),
+  control = ergm_control
+)
+
+Exog4_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre),
+  control = ergm_control
+)
+
+# Table 2: Adding endogenous terms one by one
+Endog1_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre),
+  control = ergm_control
+)
+
+Endog2_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    kstar(3),
+  control = ergm_control
+)
+
+Endog3_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+Endog4_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    kstar(3) + gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+# Table 3: Testing different GWESP decay parameters
+Decay1_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    kstar(3) + gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+Decay2_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    kstar(3) + gwesp(0.75, fixed = TRUE),
+  control = ergm_control
+)
+
+Decay3_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    kstar(3) + gwesp(0.8, fixed = TRUE),
+  control = ergm_control
+)
+
+Decay4_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_pre) + edgecov(coalition_matrix_pre) +
+    kstar(3) + gwesp(0.85, fixed = TRUE),
+  control = ergm_control
+)
+
+# Save stepwise models for pre-election
+saveRDS(Exog1_pre_q3, file = "results/tests/stepwise_exog1_pre_q3.rds")
+saveRDS(Exog2_pre_q3, file = "results/tests/stepwise_exog2_pre_q3.rds")
+saveRDS(Exog3_pre_q3, file = "results/tests/stepwise_exog3_pre_q3.rds")
+saveRDS(Exog4_pre_q3, file = "results/tests/stepwise_exog4_pre_q3.rds")
+
+saveRDS(Endog1_pre_q3, file = "results/tests/stepwise_endog1_pre_q3.rds")
+saveRDS(Endog2_pre_q3, file = "results/tests/stepwise_endog2_pre_q3.rds")
+saveRDS(Endog3_pre_q3, file = "results/tests/stepwise_endog3_pre_q3.rds")
+saveRDS(Endog4_pre_q3, file = "results/tests/stepwise_endog4_pre_q3.rds")
+
+saveRDS(Decay1_pre_q3, file = "results/tests/stepwise_decay1_pre_q3.rds")
+saveRDS(Decay2_pre_q3, file = "results/tests/stepwise_decay2_pre_q3.rds")
+saveRDS(Decay3_pre_q3, file = "results/tests/stepwise_decay3_pre_q3.rds")
+saveRDS(Decay4_pre_q3, file = "results/tests/stepwise_decay4_pre_q3.rds")
+
+# 8. STEPWISE MODEL BUILDING FOR POST-FORMATION Q3 NETWORK ------------------
+
+# Table 1: Testing exogenous terms
+Exog1_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right"),
+  control = ergm_control
+)
+
+Exog2_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + edgecov(cosponsor_matrix_post),
+  control = ergm_control
+)
+
+Exog3_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + edgecov(coalition_matrix_post),
+  control = ergm_control
+)
+
+Exog4_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post),
+  control = ergm_control
+)
+
+# Table 2: Adding endogenous terms one by one
+Endog1_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post),
+  control = ergm_control
+)
+
+Endog2_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    kstar(3),
+  control = ergm_control
+)
+
+Endog3_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+Endog4_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    kstar(3) + gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+# Table 3: Testing different GWESP decay parameters
+Decay1_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    kstar(3) + gwesp(0.7, fixed = TRUE),
+  control = ergm_control
+)
+
+Decay2_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    kstar(3) + gwesp(0.75, fixed = TRUE),
+  control = ergm_control
+)
+
+Decay3_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    kstar(3) + gwesp(0.8, fixed = TRUE),
+  control = ergm_control
+)
+
+Decay4_post_q3 <- ergm::ergm(
+  net_post_q3 ~ edges + absdiff("left_right") + 
+    edgecov(cosponsor_matrix_post) + edgecov(coalition_matrix_post) +
+    kstar(3) + gwesp(0.85, fixed = TRUE),
+  control = ergm_control
+)
+
+# Save stepwise models for post-formation
+saveRDS(Exog1_post_q3, file = "results/tests/stepwise_exog1_post_q3.rds")
+saveRDS(Exog2_post_q3, file = "results/tests/stepwise_exog2_post_q3.rds")
+saveRDS(Exog3_post_q3, file = "results/tests/stepwise_exog3_post_q3.rds")
+saveRDS(Exog4_post_q3, file = "results/tests/stepwise_exog4_post_q3.rds")
+
+saveRDS(Endog1_post_q3, file = "results/tests/stepwise_endog1_post_q3.rds")
+saveRDS(Endog2_post_q3, file = "results/tests/stepwise_endog2_post_q3.rds")
+saveRDS(Endog3_post_q3, file = "results/tests/stepwise_endog3_post_q3.rds")
+saveRDS(Endog4_post_q3, file = "results/tests/stepwise_endog4_post_q3.rds")
+
+saveRDS(Decay1_post_q3, file = "results/tests/stepwise_decay1_post_q3.rds")
+saveRDS(Decay2_post_q3, file = "results/tests/stepwise_decay2_post_q3.rds")
+saveRDS(Decay3_post_q3, file = "results/tests/stepwise_decay3_post_q3.rds")
+saveRDS(Decay4_post_q3, file = "results/tests/stepwise_decay4_post_q3.rds")

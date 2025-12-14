@@ -1,25 +1,25 @@
 ---
-title: "Co-Voting Patterns in the Dutch Parliament: A Social Network Analysis Approach"
-subtitle: Group 17
-date: 12-11-2025
+title: "Cooperation in a Fragmented Parliament: Analyzing Voting Agreement Among Dutch Political Parties"
+subtitle: A Pre-Election and Post Coalition Formation Social Network Analysis of Parliamentary Voting in the Netherlands (2023–2024)
+date: 12-14-2025
 author:
-  - name: Anne Barnasconi
-    affiliations:
-      - ref: jads
-      - ref: tiu
   - name: Vera Wentzel
     affiliations:
       - ref: jads
       - ref: tiu
-  - name: Roos Mast
+  - name: Anne Barnasconi
     affiliations:
       - ref: jads
-      - ref: tue
+      - ref: tiu
   - name: Loes van Voorden
     affiliations:
       - ref: jads
       - ref: tue
   - name: Max de Leeuw
+    affiliations:
+      - ref: jads
+      - ref: tue
+  - name: Roos Mast
     affiliations:
       - ref: jads
       - ref: tue
@@ -47,7 +47,7 @@ include-in-header:
 
 
 bibliography: r-references.bib
-csl: apa-6th-edition.csl
+csl: apa-7th-edition.csl
 
 toc: true
 toc-depth: 2
@@ -80,84 +80,93 @@ knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
 ```
 
 {{< pagebreak >}}
-<!--
-## Abstract (200 words) – 0.3 POINTS {.unnumbered}
 
-*Summarize the report. Write this as the very last thing.*
+# Abstract {.unnumbered}
 
-*   What is the main topic you are addressing?
-*   What are your research questions and hypotheses?
-*   What are your results and the main conclusion?
--->
-## Introduction
+The increasing fragmentation of the Dutch party system has complicated stable coalition formation and raised questions about how political parties cooperate in everyday parliamentary practice. This study contributes to existing work by analysing how parties collaborate through agreement on motions during the 2023-2024 electoral cycle, treating these patterns as a network and examining their structure. Two research questions guide the analysis.
 
-Over the past decades, the Dutch political landscape has become increasingly fragmented. Of the 54 registered parties, 15 currently hold seats in the House of Representatives, hindering formation of stable majority coalitions [@Otjes2015]. The repeated government collapses since 2017 underline this structural tension: as the number of viable parties grows, ideological distances widen, further complicating coalition formation and stability [@schmitt2016measure]. This study examines parties' voting agreement on motions in the 2023-2024 parliamentary cycle. Using social network analysis, it explores both structural voting patterns and the factors shaping them. To do so, the research consists of two complementary studies.
+First, we ask whether patterns of voting agreement differ between the year preceding the 2023 elections and the year following coalition formation (RQ1). 
 
-### Study 1
+Second, we examine whether voting agreement is shaped by ideological similarity, shared coalition experience, co-sponsorship of motions, and endogenous network structures (RQ2).
 
-This first study examines whether voting agreement between political parties changes between two periods: (a) the year before the 2023 elections and (b) the year after the new cabinet was formed. To explore this, the study answers the following research question:
+The study constructs weighted party co-voting networks and applies a Quadratic Assignment Procedure (QAP) to compare network structures across periods. Exponential Random Graph Models (ERGMs) on binarized weighted networks are used to explain voting agreement behavior for each period. The QAP results show no significant correlation between the pre-election and post-formation networks, indicating a change in cooperation patterns between the two time frames. The ERGM results show that ideological similarity does not affect voting agreement before elections but becomes a significant predictor after coalition formation. Co-sponsorship on writing motions has a modest positive effect in both periods, while shared coalition experience does not significantly increase agreement. Both studies combined provide unique insights in Dutch parliamentary cooperation patterns.
 
-> RQ1: Is the way Dutch political parties vote different in motions before elections compared to after cabinet formation?
 
-Previous studies demonstrate that parliamentary voting behavior adapts to political and institutional contexts. [@Lami2022] proved that party alignment of the Italian Parliament changed substantially after government transitions, observing differences in cohesion and community structure over time. Additionally, [@Louwerse2017] showed that cooperative behavior of government and opposition differ. Cross-party support tends to decline during election campaigns but intensifies after the formation of a new cabinet. These findings present that shifts in political context can lead to different voting behavior. Therefore, the hypothesis for this research question is the following:
+# Introduction
 
-> H1.1: Dutch political parties show different levels of voting agreement before elections compared to after cabinet formation.
+Over the past decades, the Dutch political landscape has become increasingly fragmented. Of the 54 registered parties, 15 currently hold seats in the House of Representatives. This large number of parties and the resulting fragmentation hinders formation of stable majority coalitions [@Otjes2015]. The repeated government falls since 2017 underline this structural tension: as the number of viable parties grows, ideological distances widen, further complicating coalition formation and stability [@schmitt2016measure]. In such a fragmented setting, understanding how parties actually collaborate requires looking beyond formal coalitions to their everyday behaviour in parliament.
 
-Two weighted voting agreement networks will be created, with nodes representing political parties and edge weights indicating the ratio of motions for which two parties voted the same. The first network is based on votes in the year preceding the 2023 elections, and the other based on votes in the year following cabinet formation. To test the first hypothesis, a Quadratic Assignment Procedure (QAP) correlation test will be employed.
+This study therefore examines parties' voting behaviour on parliamentary motions[^1], focusing on voting agreement. Voting agreement refers to the extent to which two parties cast the same vote, either both in favour or both against, on the same motions. Because voting in the Dutch parliament takes place at the party level, these patterns provide a direct behavioural indicator of how close parties align in practice. Measuring and explaining voting agreement helps reveal which factors are most important for forming cooperative and stable coalitions. The study focuses on the 2023-2024 parliamentary cycle, using social network analysis to explore how parties vote together and the factors shaping this behaviour through two complementary studies.
 
-### Study 2
+[^1]: Motions are statements from the Dutch House of Representatives or the Senate, proposed by one or more members of parliament. A motion can cover various topics, such as responses to new developments, policy attention for specific topics, or requests for funding adjustments [@parlement_motie].
 
-The second study focuses on the factors driving voting agreement between Dutch political parties for both networks from Study 1. The research question is:
+## Study 1
+
+Previous studies show that parliamentary voting adapts to political context. For instance, @Lami2022 found that party alignment in Italy changed after government transitions. Because party alignment in parliament can be expressed through how parties vote on the same motions, changes in political context should be observable as changes in voting agreement between parties. Hence, to investigate whether such patterns occur in the Netherlands, Study 1 examines whether voting agreement changes between (a) the year before the 2023 elections and (b) the year after coalition formation. It addresses the following research question:
+
+> RQ1: Do Dutch political parties show different patterns in voting agreement with respect to motions in the period before elections compared to the period after coalition formation?
+
+@Louwerse2017 demonstrated that cross-party support tends to decline during election campaigns but intensifies after the formation of a new coalition. Together with the findings from @Lami2022 this presents that shifts in political context can lead to different voting behavior. Therefore, the hypothesis for this research question is the following:
+
+> H1.1: Dutch political parties show different patterns of voting agreement in the period before elections compared to the period after coalition formation.
+
+To test the first hypothesis, two networks will be created: one for the period before the elections and one for the period after the coalition formation. These networks are described in more detail in @sec-dataset. They will be compared using a Quadratic Assignment Procedure (QAP) correlation test.
+
+## Study 2
+
+Voting agreement between parties is influenced by multiple factors. Research shows collaboration is shaped by ideological proximity, institutional cooperation, and inter-party voting dynamics [@fowler2006connecting; @Lo2023]. Parties with similar views tend to take similar positions, parties that have governed together often continue to cooperate, and broader voting patterns also shape agreement.
+
+Building on these insights, Study 2 examines the factors driving voting agreement between Dutch parties for both networks from Study 1. The research question is:
 
 > RQ2: How do ideological similarity, shared coalition experience, and structural voting patterns influence inter-party agreement on parliamentary motions?
 
-The ideology of a political party reflects its core beliefs and values about how society should function [@Corcoran2020]. It is typically measured on a left-right axis, though literature argues that this does not fully capture political orientation [@Erkel2022], leading to proposals for a bi-dimensional approach [@Borang2023]. In the Dutch context, a second cultural progressive-conservative dimension is widely recognized. However, cultural issues also influence left-right positions [@DeVries2013], suggesting that the two dimensions may be too closely intertwined (see @sec-dataset for empirical validation). Since ideology shapes positions on political issues, it plays a central role in voting behavior. Research repeatedly finds that ideological similarity between parties positively influences their voting similarity [@fowler2006connecting; @Lo2023]. Therefore, the first hypothesis is:
+The ideology of a political party reflects its core beliefs and values about how society should function [@Corcoran2020]. It is typically measured on a left-right axis, though this may not fully capture political orientation [@Erkel2022], leading to proposals for a bi-dimensional approach [@Borang2023]. In the Dutch context, a second cultural progressive-conservative dimension is recognized. Despite this, cultural issues also influence left-right positions [@DeVries2013], suggesting the two dimensions may be too closely intertwined (see [Appendix A](#sec-appendix-a) for empirical validation). Therefore, this research considers only the left-right axis for its first hypothesis:
 
 > H2.1: Parties with similar ideologies on the left-right spectrum are more likely to agree on motions.
 
-Coalition formation is an essential component of government formation. Coalition parties often have to reach agreements to facilitate effective policy-making. Research shows that these agreements are effectively enforced in the Netherlands [@Moury2013] and that they help parties agree on policy reforms [@Bergman2023]. Furthermore, [@Hahm2024] show that coalition experience between parties reduces affective polarization in the public opinion. Building on these insights, coalition experience between parties may similarly strengthen party trust and coordination at the parliamentary level. Hence, the following hypothesis is proposed:
+Coalition formation is essential for government formation, requiring parties to reach agreements for effective policy-making. Research shows that these agreements are effectively enforced in the Netherlands [@Moury2013] and help parties coordinate on policy reforms [@Bergman2023]. Furthermore, coalition experience reduces affective polarization in public opinion [@Hahm2024] and may similarly strengthen trust and coordination at the parliamentary level. Hence, the following hypothesis is proposed:
 
 > H2.2: Parties that have often been in a coalition together are more likely to agree on motions.
 
-Relationships between parties can also be understood through broader structural patterns. One such pattern is group formation: parties that frequently vote together tend to do so within larger groups rather than isolated pairs. This can be explained by a familiarity mechanism. When two parties both agree with a third, this shared connection signals ideological compatibility and reduces uncertainty between them [@Back2024], increasing the likelihood that they will also agree with each other. As this process repeats across parties, cohesive groups of voting cooperation emerge. The following hypothesis is proposed:
+Motions are frequently created by several MP's working in conjunction together, an approach called co-sponsorship. MP's introduce resolutions and amendments across party boundaries with those MP's who specialize in similar topics [@Otjes2015]. MP's frequently tend to co-sponsor bills to signal approval for a motion [@Kessler1996], which can originate from coalition membership as well as ideological similarity [@Otjes2015]. Since voting unity within parties is almost 100% in Dutch politics [@Andeweg2009], co-sponsorship behaviour at MP level can be abstracted to the party level and results in the following hypothesis:
 
-> H2.3: Parties are more likely to agree on motions if they share agreement on motions with a third party.
+> H2.3: Parties who frequently co-sponsor motions tend to agree more with each other.
 
-Structural difference also lies in parties' overall voting similarity with others. Some parties show high voting agreement with many parties across the political spectrum, while others maintain more exclusive voting patterns. Research indicates that certain parties function as important intermediaries in parliamentary voting, as they are able to cooperate with a wide range of political actors [@DelVicario2014]. In Dutch politics, centrist parties like CDA and D66 have historically functioned as such intermediaries. Conversely, populist parties tend to maintain isolated voting patterns, avoiding the compromises necessary for broad voting coalitions [@Otjes2017]. Hence, the following hypothesis is proposed:
+There are also structural differences in parties' overall voting agreement. Some parties show high agreement with many parties across the political spectrum, while others maintain more exclusive voting patterns. Certain parties tend to function as intermediaries in parliamentary voting, cooperating with a wide range of political actors [@DelVicario2014]. In Dutch politics, centrist parties like CDA and D66 have historically functioned as such intermediaries. Conversely, populist parties tend to isolate, avoiding compromises required for broad voting coalitions [@Otjes2017]. Hence, the following hypothesis is proposed:
 
 > H2.4: Some parties are more likely to agree with many other parties.
 
-The creation of motions is frequently performed by several MP's working in conjunction together, an approach called co-sponsorship. MP's introduce resolutions and amendments across party boundaries with those MP's who specialize in similar topics [@Otjes2015]. MP's frequently tend to co-sponsor bills to signal approval for a motion [@Kessler1996]. This agreement can originate from coalition membership as well as ideological similarity [@Otjes2015]. Since voting unity within parties is almost 100% in Dutch politics [@Andeweg2009] co-sponsorship behaviour at MP level can be abstracted to the party level and results in the following hypothesis:
+Relationships between parties can also be understood through broader structural patterns. One such pattern is group formation: parties that frequently vote together do so within larger groups rather than isolated pairs. This reflects a familiarity mechanism, where two parties both agreeing with a third signals ideological compatibility and reduces uncertainty [@Back2024], increasing the likelihood they will also agree. As this repeats across parties, cohesive groups of cooperation emerge. The following hypothesis is proposed:
 
-> H2.5: Parties who frequently co-sponsor motions tend to agree more with each other.
+> H2.5: Parties are more likely to agree on motions when they both often agree with the same third party.
 
-RQ2 will be answered using a GERGM, using terms depicted in @tbl-hypotheses.
+RQ2 will be answered through modelling an Exponential Random Graph Model (ERGM), using terms depicted in @tbl-hypotheses.
 
-| Hypothesis | GERGM Term | Motivation |
+| Hypothesis | ERGM Term | Motivation |
 |------------|------------|------------|
 | H2.1: Parties with similar ideologies on the left-right spectrum are more likely to agree on motions. | `absdiff(LeftVSRight)` | The term absdiff measures how differences between node (i.e. party) attributes impact tie formation, capturing how differences in ideology impact voting agreement. |
-| H2.2: Parties that have often been in a coalition together are more likely to agree on motions. | `edgecov(coalitioncount)` | The edgecov term measures how ties in a different setting impact tie formation. In the context of this research, a count variable for how many times parties have been in a coalition together will be used to capture its effect on voting agreement. |
-| H2.3: Parties are more likely to agree on motions if they share agreement on motions with a third party. | `gwesp` | Gwesp captures the tendency for parties with shared agreement for a third party to vote the same. |
-| H2.4: Some parties are more likely to agree with many other parties. | `kstar(3)` | The kstar(3) term captures the tendency for some parties to form broader patterns of cooperation by agreeing with many others. Specifically, 3-star specifically reflects parties that maintain multiple voting agreements at once, identifying those that function as broad intermediaries. |
-| H2.5: Parties who frequently co-sponsor motions tend to agree more with each other. | `edgecov(cosponsor_count)` | The edgecov term adds a dyadic predictor to the model. Here, a matrix counting how often each pair of parties co-sponsored motions is used to test whether co-sponsorship frequency increases voting agreement. |
+| H2.2: Parties that have often been in a coalition together are more likely to agree on motions. | `edgecov(coalitioncount)` | The edgecov term measures how ties in another network impact tie formation. In the context of this research, a network is used with a count variable for how many times parties have been in a coalition together as edge weight. |
+| H2.3: Parties who frequently co-sponsor motions tend to agree more with each other. | `edgecov(cosponsor_count)` | The edgecov term adds a dyadic predictor to the model. Here, a matrix counting how often each pair of parties co-sponsored motions is used to test whether co-sponsorship frequency increases voting agreement. |
+| H2.4: Some parties are more likely to agree with many other parties. | `kstar(3)` | The kstar(3) term captures the tendency for some parties to form a wider pattern of cooperation by agreeing with many others. Specifically, 3-star reflects parties that maintain multiple voting agreements at once, identifying those that function as broad intermediaries. |
+| H2.5: Parties are more likely to agree on motions when they both often agree with the same third party. | `gwesp` | Gwesp captures the tendency for parties with shared agreement for a third party to vote the same. |
 
-: Hypotheses and GERGM Terms for Study 2 {#tbl-hypotheses}
+: Hypotheses and ERGM Terms for Study 2 {#tbl-hypotheses}
 
-This research contributes to the existing body of literature by integrating structural network analysis with traditional political measures of ideology and coalition experience. It advances understanding of Dutch parliamentary voting patterns by identifying parties that act as key intermediaries, and provides empirical evidence about heterogeneity in party agreement patterns. Furthermore, it provides insights about how voting agreement is impacted by elections and coalition formation.
+This research contributes to existing work by analysing how parties collaborate through agreement on motions, treating these patterns as a network and examining their structure alongside traditional measures such as ideology and coalition experience. It advances understanding of Dutch parliamentary voting patterns by identifying key intermediary parties, and provides empirical evidence about heterogeneity in party agreement patterns. Furthermore, it provides insights about how voting agreement is impacted by elections and coalition formation.
 
-@sec-dataset details the data used for this research and @sec-data-analysis presents the adopted research rationale. Results shows the results for the two studies. Lastly, Conclusion formulates the conclusions and answers the research questions, also suggesting directions for future research.
+@sec-dataset details the data used for this research and @sec-data-analysis presents the adopted research rationale. @sec-results presents the findings of both studies, and @sec-conclusion-discussion summarises the answers to the research questions and offers directions for future work.
 
-## Dataset {#sec-dataset}
+# Dataset {#sec-dataset}
 
-### Data Sources and Collection
+## Data Sources and Collection
 
 We combine multiple datasets to examine Dutch parliamentary voting patterns. 
 
-#### Primary Data
+### Primary Data
 
-Primary data are voting records scraped from the Open Data Portal of the Dutch House of Representatives (Tweede Kamer der Staten-Generaal, 2024) via automated Python API queries (October 2025). The portal integrates four sources from which we use one: Parlis (motions and voting results). We extracted votes from two periods: November 22, 2022 – November 21, 2023 (pre-election) and July 5, 2024 – July 4, 2025 (post-formation), filtering for Voor/Tegen (in Favour/Against) votes only.
+Primary data are voting records scraped from the Open Data Portal of the Dutch House of Representatives (Tweede Kamer der Staten-Generaal, 2024) via automated Python API queries. The portal integrates four sources from which we only use Parlis (motions and voting results). We extracted votes from two periods: *November 22, 2022 - November 21, 2023* (pre-election) and *July 5, 2024 - July 4, 2025* (post-formation), filtering for in-Favour/Against votes only.
 
-We construct party co-voting networks where nodes are parties and edge weights $w_{ij}$ represent voting agreement between parties $i$ and $j$. @tbl-data-summary shows raw voting statistics.
+We construct undirected party co-voting networks where nodes are parties and edge weights $w_{ij}$ represent the number of motions on which parties $i$ and $j$ cast the same vote (both in favour or both against). @tbl-data-summary shows raw voting statistics.
 ```{r}
 #| label: tbl-data-summary
 #| tbl-cap: "Raw Voting Data by Period"
@@ -172,21 +181,21 @@ data_summary <- data.frame(
 kable(data_summary, align = 'lrr')
 ```
 
-Both studies exclude parties that were structurally absent or non-functional during the analysis period. We remove four parties from all networks: Omtzigt (an individual independent member, not a party faction), BIJ1 (lost parliamentary representation after the 2023 election), BVNL (no voting activity in our data), and 50PLUS (dissolved with only 2 votes in the pre-election year). 
+Both studies exclude parties absent or non-functional during the analysis period: Omtzigt (independent MP), BIJ1 (lost representation after 2023), BVNL (no voting activity), and 50PLUS (dissolved with only 2 votes pre-election). For Study 1, both networks include the same 17 parties, as QAP compares corresponding node positions across networks. Study 2 removes two additional parties per period (pre: GroenLinks-PvdA and NSC; post: GroenLinks and PvdA), as GroenLinks and PvdA merged after the election and NSC only emerged post-election, resulting in 15 parties per network.
 
-For Study 1, both networks include the remaining 17 parties with identical node structure, as required by QAP. For Study 2, we apply additional period-specific filtering to account for party mergers and formations since running parallel ERGMs does not require the same node sets, resulting in 15 parties for each period.
-
-Before determining the thresholds for binarizing the network to prepare for the ERGM analysis, we transform the raw weights into agreement rates by dividing the weights by the total number of motions in each period:
+For network preparation, raw weights are converted to agreement rates as fractions between 0 and 1, by dividing by the number of motions in each period:
 
 $$
 w_{ij}^{\text{normalized}} = \frac{\text{Agreement Count}_{ij}}{\text{Total Motions}}
 $$
 
-This normalization produces agreement rates as fractions (0 to 1).
+Based on the distribution of agreement rates in both networks (@fig-agreement-dist), two thresholds were evaluated for binarizing the networks that will be evaluated by the ERGMs: the mean and the third quartile (Q3). The mean captures broad relationships by including party pairs that agree above average, whilst Q3 retains only the strongest cooperation patterns.
 
-Based on the distribution of agreement rates in both networks (see @fig-agreement-dist), two potential thresholds for binarizing the weighted network were evaluated: a threshold at the mean and a threshold at the third quartile (Q3). The theoretical rationale for this threshold selection is provided in the Appendix (@sec-threshold-rationale). @fig-networks shows the resulting network structures and in @tbl-network-metrics we see that the stricter Q3 threshold produces sparser networks compared to the mean threshold. The Q3 networks mainly differ in transitivity: the pre-election network shows highly clustered voting patterns (0.89) while the post-formation network shows more dispersed patterns (0.61).
+![Agreement Rate Distributions by Period. Rates are expressed as percentage of total motions in each period.](../results/visualizations/agreement_distributions_simple.pdf){#fig-agreement-dist width=100% fig-pos='H'}
 
-![Agreement Rate Distributions by Period. Rates are expressed as percentage of total motions in each period.](../results/visualizations/agreement_distributions_simple.pdf){#fig-agreement-dist width=100%}
+From a theoretical perspective, the Q3 threshold better captures meaningful political relationships by focusing on high-agreement edges. Therefore, we selected Q3 for the final ERGM analysis, while the mean threshold serves as a robustness check to assess whether observed patterns generalize across different threshold definitions.  
+
+@fig-networks shows the resulting network structures. The network summaries in @tbl-network-metrics indicate that Q3 networks mainly differ in transitivity (*0.89* pre-election vs. *0.61* post-formation).
 
 ![Party Voting Networks by Period and Threshold. Darker edges indicate agreements above the threshold. Blue nodes represent right-wing parties, orange nodes represent centrist parties, and red nodes represent left-wing parties. ](../results/visualizations/network_comparison.pdf){#fig-networks width=100%}
 
@@ -213,17 +222,17 @@ kable(network_metrics, align = 'lrrrr')
 
 {{< pagebreak >}}
 
-#### Supplementary Data for Study 2
+### Supplementary Data for Study 2
 
 Supplementary data include:
 
-1. Ideological positions from Kieskompas 2023 [@Kieskompas2023], extracted from visualizations and mapped to left-right scales (-1 to +1). More details about the data extraction methodology can be found in the Appendix (@sec-ideological-extraction).
+1. Ideological positions from Kieskompas 2023 [@Kieskompas2023], mapped to left-right scales (-1 to +1).
 2. Co-sponsorship relationships scraped from the same API we used to scrape voting records.
-3. Coalition experience manually collected from parlement.com [@kabinetsformaties], recording historical coalition frequencies between parties
+3. Coalition experience manually collected from parlement.com [@kabinetsformaties], recording historical coalition frequencies between parties.
 
-A notable example from the co-sponsorship data is GroenLinks-PvdA, which had extensive co-sponsorship activity that ultimately led to their formal merger in 2023 [@parlementGroenLinksPvdA]. @tbl-cosponsorship provides summary statistics for both periods. 
+More details about the data extraction methodology can be found in [Appendix B](#sec-appendix-b).
 
-The coalition experience network contains 15 edges with mean 1.9 times (range 1-6), with CDA-VVD being the most frequent pair (6 times). The data extraction method for this data can also be found in the Appendix (@sec-coalition-extraction). Both co-sponsorship and coalition experience are included as edge attributes in the voting networks, ideological positions are included as node attributes. 
+The Co-sponsorship and coalition experience variables are captured as networks, with separate networks created for the pre-election and post-formation periods. @tbl-cosponsorship provides summary statistics of the co-sponsorship networks. Coalition experience is captured by a network with 15 edges (range 1-6, mean = 1.9), with CDA-VVD being the pair with the highest coalition experience. Both co-sponsorship and coalition experience are included as edge attributes in the voting agreement networks, ideological positions are included as node attributes.
 
 ```{r}
 #| label: tbl-cosponsorship
@@ -238,37 +247,392 @@ cosponsorship_stats <- data.frame(
 kable(cosponsorship_stats, align = 'lrr')
 ```
 
-### Data Usefulness and Potential Biases
+## Data Usefulness and Potential Biases
 
-These data are well-suited for studying electoral cycle dynamics because it enables temporal analysis through its use of timestamps, actual voting behavior provides objective preferences and combining voting data with ideology, coalition experience, and co-sponsorship allows testing multiple factors driving party cooperation.
+These data are well-suited for studying how voting agreement changes across the electoral cycle. The timestamps enable direct comparison of pre- and post-election behaviour. Agreement is directly measured through recorded votes, and combining these with ideology, coalition experience, and co-sponsorship allows testing which factors shape parliamentary cooperation.
 
 A potential bias is the ideological measurement error from extracting Kieskompas coordinates [@Louwerse2012; @Bakker2015], this however likely affects all parties equally and is mitigated by using ideology as a predictor rather than outcome. Temporal validity concerns (2023 ideology data vs. 2024 voting) are minimal as established party positions remain relatively stable [@Gross2021].
 
-## Research Rationale {#sec-data-analysis}
+# Research Rationale {#sec-data-analysis}
 
-The first study investigates if there is a statistical difference in voting agreement in Dutch political parties before elections compared to after cabinet formation. This will be tested by creating two networks. The first network will be based on votes in the year preceding the 2023 elections, and the other based on votes in the year following cabinet formation. To test if there is statistical difference between these networks there are 3 options to test this: t-test, Quadratic Assignment Procedure (QAP), and Multiple Regression QAP (MRQAP). A t-test is not suitable for this type of data because voting relationships in a network are not independent of each other. Since if one party often agrees with another, it can influence how that party agrees with others as well. MRQAP focuses on explaining why certain edges exist by including predictor variables, which is not necessary for study 1. 
+The first study investigates whether voting agreement patterns among Dutch political parties differ before elections compared to the period after coalition formation. To compare these two networks, we consider the Quadratic Assignment Procedure (QAP) and Multiple Regression QAP (MRQAP).  
 
-QAP is the best option for this research, since QAP can directly compare two networks by calculating the correlation between the two networks and repeatedly permutes node labels to test if this difference is by chance or a statical significant difference.
+QAP is the appropriate method for this research because it tests whether two networks show structural similarity by calculating the correlation between their adjacency matrices. The procedure repeatedly permutes node labels (party names) to generate a null distribution used to determine whether the observed correlation differs from what would occur by chance. MRQAP extends QAP by including predictor variables to explain edge formation, but this is unnecessary for RQ1, which focuses on whether the overall network structure changed rather than *why* specific relationships exist.
 
-The only assumption of QAP  is that the networks that are used need to have the exact same vertices, which is not the case, because not all election parties join the cabinet. These small parties will be added with very low edge values so that both networks share identical node sets.
+If the networks are uncorrelated (i.e., the correlation is not statistically different from zero), this indicates that voting agreement patterns in one period do not predict patterns in the other period, suggesting that cooperation structures re-organize between the pre-election and post-formation periods.
 
-The second study examines why these differences in voting agreements in the networks are happening or not. This will be done with a Generalized Exponential Random Graph Model (GERGM). The difference between a GERGM and a traditional ERGM is that it allows weighted edges.This method is suitable for the data because it can work with weighted connections, which means it can use the exact level of voting agreement instead of reducing the data to simple yes/no ties. It is also possible to handle ties in a network that are not independent.  The factors that will be added to the GERGM are the following terms: 
+The second study investigates the factors driving voting agreement patterns between parties. Binary Exponential Random Graph Models (ERGMs) enable us to test how party-level attributes (ideology), dyadic relationships (co-sponsorship and coalition patterns), and structural network effects (transitivity, degree distribution) influence voting agreement between two parties, making an ERGM suitable for the second study.
 
-The GERGM is suitable for the research question because it can test how ideological similarity, coalition position, and structural patterns in the network influence voting agreement between parties. This makes it possible to understand the mechanisms behind voting behaviour.
+A bipartite ERGM (parties x motions) was also considered, but not selected because it would model explicit voting behaviours per motion, rather than combined voting agreement, thereby failing to address our research question. Additionally, the resulting network (~75,000 possible edges resulting from 15 parties x ~5000 motions, see  @tbl-data-summary) would be too computationally heavy and incompatible with our party-level dyadic attributes like coalition experience and co-sponsorship.
 
-A bipartite ERGM was considered as an alternative, but this would model connections between parties and motions instead of direct cooperation between parties. It would also be much more complex without answering the research question as clearly. Traditional regression models were also not suitable because they assume independence between observations. So, the GERGM is the most appropriate method for study 2.
+Additionally, a weighted approach using a Generalized ERGM (GERGM) was explored. Several GERGM specifications were implemented but failed to converge reliably, likely caused by the small network size (15 parties) and computational demands of modelling continuous edge weights. Moreover, the GERGM framework restricts the range of structural terms that can be specified, limiting our ability to model mechanisms relevant for answering RQ2. Given these constraints, binarized ERGMs provide the most suitable and robust modelling strategy for Study 2. 
+
+# Results {#sec-results}
+
+In this section, the findings of both Study 1 and Study 2 are presented.
+
+## Results Study 1
+
+To assess whether voting agreement on motions between Dutch parties changes before elections compared to the period after coalition formation, we compared the two weighted voting-agreement networks (generated before binarizing, see @sec-dataset) using a Quadratic Assignment Procedure (QAP) correlation test. 
+
+This test generated a permutation distribution representing correlations expected under the null hypothesis of no relationship between the networks. @tbl-qap-results summarizes the test results, and @fig-qap-distribution visualizes the permutation distribution of 1000 simulated correlations. The observed Pearson correlation between the networks is -0.118 (r = -0.1184753).
+
+```{r}
+#| label: tbl-qap-results
+#| tbl-cap: "QAP Test Results Summary"
+
+library(knitr)
+
+# Load QAP results
+load("../results/statistics/qap_results.RData")
+
+# Extract key statistics
+qap_table <- data.frame(
+  Statistic = c("Observed Correlation (r)", 
+                "Replications", 
+                "p-value (≥ observed)", 
+                "p-value (≤ observed)",
+                "",
+                "Permutation Distribution:",
+                "  Mean",
+                "  Median",
+                "  Min",
+                "  Max"),
+  Value = c(sprintf("%.4f", qap_summary$testval),
+            "1000",
+            sprintf("%.3f", qap_summary$pgreq),
+            sprintf("%.3f", qap_summary$pleeq),
+            "",
+            "",
+            sprintf("%.4f", mean(qap_result$dist)),
+            sprintf("%.4f", median(qap_result$dist)),
+            sprintf("%.4f", min(qap_result$dist)),
+            sprintf("%.4f", max(qap_result$dist)))
+)
+
+kable(qap_table, col.names = c("Statistic", "Value"), align = 'lr')
+```
+
+The two-tailed p-values indicate that the observed correlation of -0.118 is not statistically significant for a significance level of $\alpha=0.05$, and therefore no conclusions about the direction of the correlation can be made. Specifically, 37% of randomly permuted networks showed correlations equal to or lower than the observed value (p = 0.37), while 63% showed correlations equal to or higher (p = 0.63). Both p-values exceed the 5%, indicating that the observed correlation is well within the range of values expected by random chance alone.
+
+@fig-qap-distribution visualizes this result: the dashed vertical line marking the observed correlation falls within the central portion of the permutation distribution, not in its tails where significant results would appear. This indicates that voting agreement patterns in one period do not predict patterns in the other. The lack of correlation suggests that cooperation structures re-organized between the two periods, supporting H1.1.
+
+![Permutation Distribution of QAP Test.](../results/visualizations/qap_results.pdf){#fig-qap-distribution width=70% fig-pos='H'}
 
 {{< pagebreak >}}
 
-## Appendix A: Network Threshold Selection Rationale {#sec-threshold-rationale}
+## Results Study 2
 
-The thresholds were chosen with the aim to only include edges between parties that demonstrate a meaningful level, i.e. a sufficiently high ratio, of voting agreement. Firstly, a threshold at the mean was set to capture a broad set of relationships, creating edges between parties that agree more often than the mean agreement between parties. In contrast, the Q3 threshold keeps only the highest quartile of agreement values, therefore only forming edges between parties that show higher ratios of agreement. From a theoretical perspective, the Q3 threshold is more suitable to capture meaningful relationships, since only edges are formed between parties with a high level of agreement. Still, the mean threshold is used to evaluate whether the observed patterns persist under a broader and less restrictive definition of voting agreement, thereby providing a robustness check and supporting the generalizability of the results.
+In this section, the final ERGMs selected for both the pre-coalitions and post-coalition networks are presented. Results are discussed per model.
 
-## Appendix B: Supplementary Data Collection {#sec-appendix-b}
+This study starts off with four networks as discussed in @sec-dataset: pre-election and post-formation, using both the mean and Q3 thresholds. They were tested for convergence to check generalizability; all models converged. We use the **Q3 threshold** for the final analysis, as the mean produced larger AIC/BIC shifts, while Q3 gave more stable results -- as can be seen in @tbl-convergence-comparison.
 
+```{r}
+#| label: tbl-convergence-comparison
+#| tbl-cap: "Results of converging tests for pre- and post network with a binarization threshold of either the mean, or Q3"
+
+# Load models
+model_pre_q3 <- readRDS("../results/tests/convergence_pre_q3.rds")
+model_pre_mean <- readRDS("../results/tests/convergence_pre_mean.rds")
+model_post_q3 <- readRDS("../results/tests/convergence_post_q3.rds")
+model_post_mean <- readRDS("../results/tests/convergence_post_mean.rds")
+
+# Extract coefficients and format
+get_coef <- function(model, name) {
+  coef <- summary(model)$coef[name, "Estimate"]
+  pval <- summary(model)$coef[name, "Pr(>|z|)"]
+  stars <- ifelse(pval < 0.001, "***", 
+                 ifelse(pval < 0.01, "**", 
+                       ifelse(pval < 0.05, "*", "")))
+  sprintf("%.3f%s", coef, stars)
+}
+
+# Create table
+comparison_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.coalition_matrix_pre", 
+           "edgecov.cosponsor_matrix_pre", "kstar3", "gwesp.fixed.0.7",
+           "edgecov.coalition_matrix_post", "edgecov.cosponsor_matrix_post",
+           "", "AIC", "BIC", "Log Likelihood"),
+  Pre_Q3 = c(get_coef(model_pre_q3, "edges"),
+             get_coef(model_pre_q3, "absdiff.left_right"),
+             get_coef(model_pre_q3, "edgecov.coalition_matrix_pre"),
+             get_coef(model_pre_q3, "edgecov.cosponsor_matrix_pre"),
+             get_coef(model_pre_q3, "kstar3"),
+             get_coef(model_pre_q3, "gwesp.fixed.0.7"),
+             "—", "—", "",
+             sprintf("%.1f", AIC(model_pre_q3)),
+             sprintf("%.1f", BIC(model_pre_q3)),
+             sprintf("%.1f", logLik(model_pre_q3))),
+  Pre_Mean = c(get_coef(model_pre_mean, "edges"),
+               get_coef(model_pre_mean, "absdiff.left_right"),
+               get_coef(model_pre_mean, "edgecov.coalition_matrix_pre"),
+               get_coef(model_pre_mean, "edgecov.cosponsor_matrix_pre"),
+               get_coef(model_pre_mean, "kstar3"),
+               get_coef(model_pre_mean, "gwesp.fixed.0.7"),
+               "—", "—", "",
+               sprintf("%.1f", AIC(model_pre_mean)),
+               sprintf("%.1f", BIC(model_pre_mean)),
+               sprintf("%.1f", logLik(model_pre_mean))),
+  Post_Q3 = c(get_coef(model_post_q3, "edges"),
+              get_coef(model_post_q3, "absdiff.left_right"),
+              "—",
+              "—",
+              get_coef(model_post_q3, "kstar3"),
+              get_coef(model_post_q3, "gwesp.fixed.0.7"),
+              get_coef(model_post_q3, "edgecov.coalition_matrix_post"),
+              get_coef(model_post_q3, "edgecov.cosponsor_matrix_post"),
+              "",
+              sprintf("%.1f", AIC(model_post_q3)),
+              sprintf("%.1f", BIC(model_post_q3)),
+              sprintf("%.1f", logLik(model_post_q3))),
+  Post_Mean = c(get_coef(model_post_mean, "edges"),
+                get_coef(model_post_mean, "absdiff.left_right"),
+                "—",
+                "—",
+                get_coef(model_post_mean, "kstar3"),
+                get_coef(model_post_mean, "gwesp.fixed.0.7"),
+                get_coef(model_post_mean, "edgecov.coalition_matrix_post"),
+                get_coef(model_post_mean, "edgecov.cosponsor_matrix_post"),
+                "",
+                sprintf("%.1f", AIC(model_post_mean)),
+                sprintf("%.1f", BIC(model_post_mean)),
+                sprintf("%.1f", logLik(model_post_mean)))
+)
+
+colnames(comparison_table) <- c("Term", "Pre-Q3     ", "Pre-Mean     ", 
+                                 "Post-Q3     ", "Post-Mean     ")
+knitr::kable(comparison_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+### Pre-election Network Results
+
+The final ERGM for the pre-election network was chosen after comparing several stepwise model builds. Exogenous terms (*edgecov(coalition)*, *edgecov(cosponsor)*, and *absdif(left_right)*) were added first. The results ([Appendix C.1](#sec-stepwise-exog)) showed that the model with all three terms performed best on AIC, BIC, and log likelihood. Next, the endogenous terms *kstar(3)* and *gwesp(0.70)* were added one by one. These results ([Appendix C.2](#sec-stepwise-endog)) showed that including both terms gave the best overall performance.
+
+The selected model was then refined by testing gwesp decay values from 0.70 to 0.85 in steps of 0.05. Results are shown in [Appendix C.3](#sec-stepwise-decay). The AIC/BIC and log-likelihood stayed stable across these settings. Based on the best performing Goodness of Fit (GOF) and Markov Chain Monte Carlo (MCMC), a decay of 0.75 was chosen as optimal. We therefore proceed with this in the final pre-election model, [Appendix D](#sec-appendix-d) provides full model settings. This model yields an AIC of 58.28, a BIC of 74.21, and a log-likelihood of −23.14 (see highlighted row in [Appendix C.3](#sec-stepwise-decay)).
+
+#### MCMC Diagnostics
+
+[Appendix E](#sec-appendix-e) shows that the MCMC traces for most terms are stable, fluctuating around constant central values. The edges, ideological distance, and cosponsorship terms show no drift, and their density plots are unimodal and well behaved. However the coalition term performs notably worse. Its trace shows wide, irregular swings and fails to settle into a stable range, indicating poor mixing and reduced reliability. Most components perform well, but the poor coalition term should be considered when interpreting its effect.
+
+#### Goodness-of-fit
+
+The GOF plots ([Appendix F](#sec-appendix-f)) show that the model captures some broad structural tendencies of the pre-election network, but several discrepancies remain. 
+
+The model underestimates nodes both with low and high degrees. It also underrepresents edges with multiple shared partners, indicating limited local clustering by generating fewer closed triads than observed. In addition, the minimum geodesic distance distribution shows that the model predicts too many short paths, resulting in an overly connected network. Overall, model fit is limited, and results should therefore be interpreted with caution.
+
+#### Model Term Estimates
+
+The ERGM estimates are expressed on a log scale. To make these results easier to interpret, estimates were converted into probabilities using the following formula:
+
+$$
+p = \frac{e^\text{estimate}}{1 + e^\text{estimate}}
+$$
+
+@tbl-ergm-pre-results presents these ERGM estimates for the pre-election network. In interpreting these results, $\alpha=0.05$ is chosen as a threshold for statistical significance.
+
+```{r}
+#| label: tbl-ergm-pre-results
+#| tbl-cap: "Results Pre-election ERGM"
+#| echo: false
+
+final_model <- readRDS("../results/models/final_ergm_pre_q3.rds")
+coef_table <- summary(final_model)$coefficients
+
+# Create readable term names
+term_names <- c(
+  "edges",
+  "absdiff.left_right",
+  "edgecov.coalition matrix_pre",
+  "edgecov.cosponsor matrix_pre", 
+  "kstar3",
+  "gwesp.fixed.0.75"
+)
+
+results_df <- data.frame(
+  Term = term_names,
+  Estimate = coef_table[, "Estimate"],
+  Probability = exp(coef_table[, "Estimate"]) / (1 + exp(coef_table[, "Estimate"])),
+  `Odds Ratio` = exp(coef_table[, "Estimate"]),
+  `Std. Error` = coef_table[, "Std. Error"],
+  `z value` = coef_table[, "z value"],
+  `Pr(>|z|)` = coef_table[, "Pr(>|z|)"],
+  Signif = ifelse(coef_table[, "Pr(>|z|)"] < 0.001, "***",
+                  ifelse(coef_table[, "Pr(>|z|)"] < 0.01, "**",
+                         ifelse(coef_table[, "Pr(>|z|)"] < 0.05, "*", ""))),
+  check.names = FALSE
+)
+
+knitr::kable(results_df, digits = 3, row.names = FALSE)
+``` 
+
+Firstly, the negative and statistically significant *edges* term (p = 0.027) shows that the probability of any two parties agreeing on a motion (under the Q3 binarization threshold) is low (10.5%). This indicates that voting agreement is generally unlikely in this network.
+
+The first term, the *absdiff(left_right)*, is not statistically significant (p=0.388). This indicates that ideological proximity does not systematically increase voting agreement in the pre-election period, providing no support for H2.1.
+
+Also the *edgecov(coalition_matrix_pre)* term is not statistically significant (p=0.584), offering no empirical support for H2.2. This result should be interpreted with caution due to the terms unstable MCMC diagnostics
+
+The *edgecov(cosponsor_matrix_pre)* term estimate is positive and statistically significant ($\beta=0.041$, p = 0.008), though the effect is small. The predicted probability is about 51.0%, meaning that parties that often co-sponsor motions are only slightly more likely to agree on motions. The small effect gives limited support for H2.3. 
+
+The *kstar(3)* term is statistically significant and negative ($\beta=-0.315$, p < 0.001). This indicates that high-degree nodes are less common than expected under a random baseline. The probability of 42.2% shows that ties increasing a party’s degree are moderately unlikely. H2.4 is therefore not supported in this network.
+
+The *gwesp(0.75)* term shows a positive and statistically significant effect ($\beta=1.5126$, p < 0.001) indicates a strong transitive effect. The corresponding probability shows that when parties both agree with the same third party, then they are 82.1% more likely to agree with each other.This provides support for H2.5.
+
+### Post-Coalition Formation Network Results
+
+For the final specification of the ERGM for the post-formation network, all terms remain included, with the same Q3 binarisation threshold and *gwesp* decay of 0.75. 
+
+As in the pre coalition analysis, additional experiments were conducted using hierarchical model building in [Appendix G.1](#sec-stepwise-exog-post) and [Appendix G.2](#sec-stepwise-endog-post) and gwesp decay values ranging from 0.70 to 0.85 ([Appendix G.3](#sec-stepwise-decay-post)). Although some of these specifications produced slightly improved MCMC or GOF results, the original (pre-election) decay setting was retained to ensure comparability between the pre- and post-network models. The final post-formation ERGM specification is reported in [Appendix H](#sec-appendix-h), with results shown in @tbl-ergm-post-results. This model yields an AIC of 68.63, a BIC of 84.55, and a log-likelihood of −28.31.
+
+#### MCMC Diagnostics
+
+The MCMC diagnostics ([Appendix I](#sec-appendix-i)) show that the MCMC-sampler behaves adequately for nearly all parameters in the post-coalition model. The traces for edges, ideological distance, and cosponsorship stay close to stable values and show no drift, with clean and unimodal densities. The coalition term also mixes much better than in the pre-coalition model and stays within a narrow, stable band. The endogenous terms *kstar(3)* and *gwesp(0.75)* display similarly regular traces and densities. 
+
+Overall, the diagnostics suggest proper convergence and more reliable estimates than in the pre-coalition model.
+
+#### Goodness-of-fit
+The GOF plots ([Appendix J](#sec-appendix-j)) show that the model fits the post-coalition network reasonably well. The model slightly underrepresents nodes at the extremes of the degree distribution and predicts too many short paths, resulting in a somewhat more connected network than observed. These deviations are limited, and the model provides a solid basis for interpreting the ERGM results in the post-coalition analysis.
+
+#### Model Term Estimates
+@tbl-ergm-post-results presents the ERGM estimates for the post-coalition network. The estimates are converted to probabilities using the estimate formula. Significance is again evaluated at $\alpha = 0.05$.
+
+```{r}
+#| label: tbl-ergm-post-results
+#| tbl-cap: "Results Post-formation ERGM"
+#| echo: false
+
+final_model <- readRDS("../results/models/final_ergm_post_q3.rds")
+coef_table <- summary(final_model)$coefficients
+
+# Create readable term names
+term_names <- c(
+  "edges",
+  "absdiff.left_right",
+  "edgecov.coalition matrix_post",
+  "edgecov.cosponsor matrix_post", 
+  "kstar3",
+  "gwesp.fixed.0.75"
+)
+
+results_df <- data.frame(
+  Term = term_names,
+  Estimate = coef_table[, "Estimate"],
+  Probability = exp(coef_table[, "Estimate"]) / (1 + exp(coef_table[, "Estimate"])),
+  `Odds Ratio` = exp(coef_table[, "Estimate"]),
+  `Std. Error` = coef_table[, "Std. Error"],
+  `z value` = coef_table[, "z value"],
+  `Pr(>|z|)` = coef_table[, "Pr(>|z|)"],
+  Signif = ifelse(coef_table[, "Pr(>|z|)"] < 0.001, "***",
+                  ifelse(coef_table[, "Pr(>|z|)"] < 0.01, "**",
+                         ifelse(coef_table[, "Pr(>|z|)"] < 0.05, "*", ""))),
+  check.names = FALSE
+)
+
+knitr::kable(results_df, digits = 3, row.names = FALSE)
+```
+
+The *edges* term is negative but not statistically significant ($\beta=−1.094$, p = 0.204). This indicates that there is no strong evidence for a change in the baseline likelihood of an agreement tie after applying the Q3 threshold, although the estimated probability of ties forming remains at 25.1%.
+
+Unlike for the pre-election period, the *absdiff(left_right)* term is statistically significant ($\beta=−2.436$, p = 0.011). The corresponding probability of 8.0%  shows that, when two parties are ideologically far apart, their chances of voting in agreement are very low, highlighting a strong role of ideological similarity in shaping post-coalition voting patterns. This provides support for H2.1.
+
+The *edgecov(coalition_matrix_post)* term remains statistically non-significant ($\beta=0.0119$, p = 0.97), offering no evidence that past coalition participation predicts agreement after the election. Given the now stable MCMC diagnostics, the absence of a significant effect appears substantive rather than a result of model instability. Thus, H2.2 is not supported in the post-coalition network.
+
+The *cosponsorship* term retains a positive and statistically significant estimate ($\beta=0.0213$, p = 0.0013). However, the estimate is again small, translating in a modest near-baseline probability of 50.3%. Co-sponsorship thus plays only a modest role, offering limited support for H2.3 across both periods.
+
+Just as for the pre-election network, the *kstar(3)* term is negative and statistically significant ($\beta=-0.265$, p = 0.001), with a similar probability 43.4%, again showing that high-degree nodes are less common than expected under a random baseline. This disproves H2.4.
+
+The *gwesp(0.75)* term remains positive and significant with a large estimate ($\beta=1.321$, p < 0.001). Parties that often agree with the same third party are again more likely to agree with each other, in this period with a probability of 78.9%. This shows that clustering in agreement persists, and supports H2.5 in both networks.
+
+# Discussion & Conclusion {#sec-conclusion-discussion}
+
+This project researched how Dutch political parties cooperate through parliamentary voting and how these patterns change across the 2023 - 2024 electoral cycle. The research was divided into two studies. The research question of Study 1 was:
+
+> RQ1: Do Dutch political parties show different patterns in voting agreement with respect to motions in the period before elections compared to the period after coalition formation? 
+
+We built on this research with a secondary study answering the following research question: 
+
+> RQ2: How do ideological similarity, shared coalition experience, and structural voting patterns influence inter-party agreement on parliamentary motions?
+
+Combining these questions allows us to uncover which factors drive voting agreement between parties, and how these patterns shift with political context. This is crucial for understanding actual collaboration in parliament and determining which factors can help formation of stable majority coalitions in the fragmented Dutch political landscape.
+
+Study 1 examined whether the overall pattern of voting differs between the year before the 2023 elections and the year after the new coalition was formed. With a QAP correlation test, we found that the observed similarity between the two networks is no greater than what would be expected by random chance. Combined with descriptive differences in mean tie strength (see @tbl-network-metrics) and the changes visible in the network plots (see @fig-networks), this supports our hypothesis that Dutch political parties show different patterns of voting agreement before elections compared to after coalition formation.
+
+Study 2 used ERGMs to investigate the mechanisms behind these patterns. We observed strong clustering effects in both periods, reflected in positive and significant *gwesp* terms. This shows that parties tend to agree in groups rather than in pairs, regardless of differing political context surrounding the elections. However, the MCMC diagnostics differed: the post-formation model converged more easily and showed better fit, while the pre-election model was harder to estimate. This suggests that agreement before the election is more mixed and unpredictable and becomes more stable after coalition formation. 
+
+The role of ideology was different for the two periods. Before the election, ideological similarity did not significantly influence voting agreement. This indicates that strategic behavior or coalition signalling might overshadow the impact of ideological proximity in the pre-election phase voting patterns. In the period after coalition formation, ideological distance showed a significant negative effect on agreement, meaning that ideologically similar parties are more likely to vote the same on motions. This shift could imply that ideological alignment becomes more influential once the electoral competition is over and governing begins. This may also be caused by the government/opposition divide potentially making ideological positions more binding.
+
+Other factors showed weaker or more nuanced effects. Coalition history did not significantly increase or decrease voting agreement in either period. This suggests that previous cooperation in government does not necessarily translate into consistent mutual support on motions. Moreover, the coalition term complicated model convergence and degraded GOF, likely because only a small and stable subset of parties participates in coalitions, leaving too little structural variation for ERGM estimation.
+
+Similarly, the results show no evidence that parties act as broad intermediaries who systematically agree with many others. Instead, the network structure in both periods disfavors such central actors and agreement tends to form within structured clusters rather than revolving around a few widely connected parties. This shows how fragmentation suppresses the intermediary role that center parties provided in the past, forming a political structure with co-voting groups instead of broad cross-party agreements. 
+
+Finally, co-sponsorship had a modest but positive effect in both periods, which suggests that legislative collaboration encourages agreement but is not a dominant driver of voting behavior. The signals of co-sponsorship, therefore, indicate some cooperation but explain only a small share of the overall structure of the parliamentary agreement.
+
+Together, the two studies show that Dutch parliamentary agreement is shaped by differences between political phases together with the underlying network structure. Elections and coalition formation cause differences in agreement patterns, potentially due to parties’ efforts to differentiate themselves and position strategically during campaigns, whilst remaining more ideology-driven during actual governing.
+At the same time, the network mechanism of clustering appears stable across both periods. Hence, co-voting groups emerge not only from external political factors like ideology and coalition history, but also from already existing interactions and dynamics within the parliament.
+
+These findings have several important implications for different stakeholders. For parliamentarians, recognising that ideological alignment becomes more important after formation can help anticipate voting behavior during governing periods. Besides, awareness of strong clustering effects enables better expectations about coalition support on key issues. Furthermore, this study offers academic insights relevant to political scientists studying legislative behavior by showing how cooperation develops across the electoral phases. Journalists and policy analysts can also use such insights to better explain coalition negotiations,voting behaviour, and potential legislative bottlenecks.
+
+## Future Research
+
+A question that remains unaddressed in this research is which exact political events are driving the observed shifts in voting agreement. Future work could analyse continuous time-series data rather than two snapshots to better identify when structural shifts occur and thus which events drive them.
+
+In addition, this study does not consider the content of motions as a potential driver of voting agreement. All motions are treated uniformly, ignoring how policy areas might affect co-voting patterns. Future research could classify motions by topic to examine these effects, and a bipartite ERGM would be well-suited for this purpose, as it allows information about both motions and parties to be modelled simultaneously. 
+
+Furthermore, this research focuses on only one coalition formation cycle. It would be valuable to examine whether similar shifts in voting agreement occur in other formation cycles. Future research could replicate this study for the 2025 elections to assess whether the before-and-after pattern observed here recurs in Dutch parliamentary politics or is specific to the 2023-2024 cycle. This would clarify whether changes in voting agreement are structurally linked to elections and coalition formation or depend on the specific political context of each cycle. 
+
+## Concluding
+
+To conclude, this study showed that cooperation in the Dutch parliament changes over time and cannot be explained by ideology alone. Elections and coalition formation transform patterns of agreement, while underlying patterns, especially parties’ tendency to agree in groups, remain stable. Understanding these dynamics is essential to interpret parliamentary behavior and offers insights into how political coalitions could evolve within the increasingly fragmented political landscape.
+
+# Technology statement student(s)
+
+During the preparation of this work, we used ChatGPT in order to improve phrasing of certain words and formulations in writing the report. The tool was also used to translate text initially written in Dutch. After using this tool/service, Anne, Vera, Loes, Max, Roos and Guido always carefully evaluated the validity of the tool’s outputs and edited the content as needed. As a consequence, we take full responsibility for the content of this work.
+
+{{< pagebreak >}}
+
+# References
+
+::: {#refs}
+:::
+
+{{< pagebreak >}}
+
+# Appendix {.appendix}
+
+## A: Correlation left-right vs. progressive-conservative {#sec-appendix-a}
+Ideological positions from Kieskompas show strong correlation between left-right and conservative-progressive dimensions (r = -0.860), as illustrated in @fig-ideology-correlation-plot, indicating substantial overlap. This finding validates the theoretical concern raised in the introduction that the two dimensions may be too closely intertwined. We therefore use only the left-right dimension to avoid multicollinearity.
+
+![Ideology Dimensions Correlation](../results/visualizations/ideology_correlation.pdf){#fig-ideology-correlation-plot width=80%}
+
+This correlation was obtained with the following code in R:
+
+```{r}
+#| eval: false
+#| echo: true
+
+# Pearson correlation between ideology dimensions
+pearson_test <- stats::cor.test(ideology_data$left_right, 
+                                 ideology_data$conservative_progressive, 
+                                 method = "pearson")
+
+# Scatterplot
+plot(ideology_data$left_right, ideology_data$conservative_progressive,
+     xlab = "Left-Right", ylab = "Conservative-Progressive",
+     main = sprintf("Ideology Dimensions (r = %.3f)", pearson_test$estimate),
+     pch = 19, col = "steelblue")
+
+abline(lm(conservative_progressive ~ left_right, data = ideology_data), 
+       col = "red", lwd = 2)
+
+text(ideology_data$left_right, ideology_data$conservative_progressive, 
+     labels = ideology_data$party, pos = 3, cex = 0.7)
+```
+
+## B: Supplementary Data Collection {#sec-appendix-b}
 ### Ideological Position Data Extraction {#sec-ideological-extraction}
 
-To capture the political positions of Dutch parties across the ideological spectrum, we relied on data from Kieskompas [@Kieskompas2023], a research organization dedicated to analyzing political opinions and party positioning. During election cycles, Kieskompas condenses their findings into two-dimensional visualizations showing parties' positions on the left-right (economic) and progressive-conservative (cultural) axes.
+To capture the political positions of Dutch parties across the ideological spectrum, we relied on data from Kieskompas [@Kieskompas2023], a research organization dedicated to analyzing political opinions and party positioning. 
 
 Since Kieskompas does not publicly release the underlying coordinate data, we extracted numerical values from their published visualizations using plot digitization software. The primary data source was the 2023 election visualization (@fig-kieskompas-source). However, the 2023 data included GroenLinks-PvdA as a merged entity, while our pre-election analysis period (2022-2023) required separate coordinates for GroenLinks and PvdA. We therefore supplemented the 2023 data with coordinates for these two parties from previous Kieskompas election visualizations.
 
@@ -287,146 +651,564 @@ Coordinate extraction was performed using PlotDigitizer (plotdigitizer.com), a w
 
 ### Coalition Experience Data Collection {#sec-coalition-extraction}
 
-To capture historical coalition patterns between Dutch political parties, we collected data on cabinet formations from Parlement.com [@kabinetsformaties], an authoritative source documenting all Dutch government formations since 1945. We focused on coalitions from the last 20 years (2003-2023) to ensure relevance to current party dynamics while capturing sufficient historical cooperation patterns.
+To capture historical coalition patterns between Dutch political parties, we collected data on coalition formations from Parlement.com [@kabinetsformaties], an authoritative source documenting all Dutch government formations since 1945. 
 
 The data collection process was entirely manual and involved:
 
-1. Reviewing each cabinet formation listed on https://www.parlement.com/kabinetsformaties-sinds-1945
+1. Reviewing each coalition formation listed on https://www.parlement.com/kabinetsformaties-sinds-1945
 2. Identifying which parties participated in each coalition government within the 20-year window
-3. Recording each unique party pair that served together in a cabinet
+3. Recording each unique party pair that served together in a coalition
 4. Counting the frequency of co-participation for each party pair across all coalitions
 
-The resulting dataset contains 17 unique party pairs with co-coalition frequencies ranging from 1 to 6 times. For example, CDA and VVD served together in 6 different coalition governments, making them the most frequent coalition partners in our dataset. CDA also had 4 coalitions with ChristenUnie and 3 with D66. More recent coalition formations include BBB, NSC, and PVV each serving together once with VVD in the studied (2024) cabinet.
+This dyadic coalition count data was structured as an undirected edge list (party A, party B, number of coalitions together) and stored in CSV format.
 
-This dyadic coalition count data was structured as an undirected edge list (party A, party B, number of coalitions together) and stored in CSV format. In the ERGM analysis, this matrix serves as an edge covariate (`edgecov(coalition_matrix)`), testing whether historical coalition experience increases the likelihood of contemporary voting agreement between parties (H2.2).
+## C: Hierarchial Building for the Q3 Thresholded Pre-election Network {#sec-appendix-c}
 
-## References
+This appendix presents the stepwise model building process for the pre-election Q3 network, testing different combinations of exogenous and endogenous terms.
 
-::: {#refs}
-:::
+During the model development process, numerous model specifications were tested and systematically documented to identify the optimal configuration. @fig-building-pre shows the complete testing overview for the pre-election network.
 
-<!--
-
-(about 500 words) – 1 POINTS
-
-* Why are these two methods suitable for your data?
-* Why are these two methods suitable for your research questions?
-* Are there other methods to address these questions? If yes, why are the
-methods you chose better for this case?
-
-## Results {#sec-results}
-
-(about 2000 words)
-
-### Model 1 {#sec-model1}
-
-(about 1000 words) – 2.5 POINTS
-
-* Present your results appropriately (plots, tables…) and discuss your findings
-in plain English
-* Discuss the meaning of your findings in relation to your hypothesis. (half of
-the points evaluated in this other part)
-
-
-```{r}
-#| label: tbl-example
-#| tbl-cap: Example dataframe printed
-
-# table example
-cn <- c("age", "gender", "eyes_col")
-one <- c(7, "M", "BLUE")
-two <- c(8, "F", "BROWN")
-three <- c(8, "M", "GREEN")
-four <- c(7, "F", "PINK")
-tab <- rbind(cn, one, two, three, four)
-rownames(tab) <- NULL
-
-knitr::kable(as.data.frame(tab))
-```
-
-
-### ERGM {#sec-ergm}
-
-(about 1000) – 2.5 POINTS
-
-* Present your results appropriately (plots, tables…) and discuss your findings
-in plain English
-* Discuss the meaning of your findings in relation to your hypothesis. (half of
-the points evaluated in this other part)
-
-
-```{r}
-#| label: ergm-that-takes-long
-#| cache: true # now Quarto will save the objects in this cell in the background, and will only re-compute them, if the source code changes! Make sure to give it a label, so it can keep track of which cell is cached.
-
-ctl <- c(4.17, 5.58, 5.18, 6.11, 4.50, 4.61, 5.17, 4.53, 5.33, 5.14)
-trt <- c(4.81, 4.17, 4.41, 3.59, 5.87, 3.83, 6.03, 4.89, 4.32, 4.69)
-group <- gl(2, 10, 20, labels = c("Ctl", "Trt"))
-weight <- c(ctl, trt)
-lm.D9 <- lm(weight ~ group)
-lm.D90 <- lm(weight ~ group - 1)
-```
-
-
-
-
-```{r}
-#| output: asis
-#| label: tbl-model2
-#| tbl-cap: "Comparison of Model 1 and Model 2"
-
-# model results display example, using the cached variables, so you can tinker with the presentation without re-running any ERGMs :D
-
-# install.packages("texreg") if needed
-texreg::texreg(
-  list(lm.D9, lm.D90), 
-  dcolumn = TRUE, 
-  booktabs = TRUE, 
-  label = NaN, 
-  table = FALSE, 
-  use.packages = FALSE)
-```
-
-
-
-
-
-```{r}
-#| label: fig-reg_plot
-#| fig-cap: " Visual Comparison of Model 1 and Model 2"
-
-# model results display example, using the cached variables, so you can tinker with the presentation without re-running any ERGMs :D
-
-# install.packages("texreg") if needed
-texreg::plotreg(list(lm.D9, lm.D90))
-```
-
-## Conclusion {#sec-conclusion}
-
-(about 350 words) – 0.7 POINTS
-
-What were your topic and research questions again? (1 sentence)
-
-What did you learn from the two analysis you run? *** most important point to
-address 0.5 POINTS here
-
-Who benefits from your findings?
-
-What does remain an open problem?
-
-Can you give suggestions for future work in this area?
+![Model Testing Overview for Pre-Election Network](building_pre.png){#fig-building-pre width=100% fig-pos='H'}
 
 {{< pagebreak >}}
 
-## Technology statement student(s)
+### Testing Exogenous Terms {#sec-stepwise-exog}
 
-For the assignment, you must add the technology statement, using the text below.
-Replace the text in capital letters with the requested information.
+```{r}
+#| label: tbl-stepwise-exog
+#| tbl-cap: "Stepwise ERGM: Testing Exogenous Terms for Pre-Election Q3 Network"
 
-> During the preparation of this work, I/We used **[NAME TOOL / SERVICE / VERSION OF AI TOOL]**
-> in order to **[REASON]**. The following parts of the assignment were affected/generated by AI tool usage:
-> **[INTRODUCTION / METHODS / xxx, DISCUSSION]**. After using this tool/service, **[NAME STUDENT(S)]**
-> evaluated the validity of the tool's outputs, including the sources that generative AI tools have used,
-> and edited the content as needed. As a consequence, **[NAME STUDENT(S)]** take(s) full responsibility
-> for the content of their work.
--->
+# Load stepwise exogenous models
+exog1 <- readRDS("../results/tests/stepwise_exog1_pre_q3.rds")
+exog2 <- readRDS("../results/tests/stepwise_exog2_pre_q3.rds")
+exog3 <- readRDS("../results/tests/stepwise_exog3_pre_q3.rds")
+exog4 <- readRDS("../results/tests/stepwise_exog4_pre_q3.rds")
+
+# Helper function
+get_coef <- function(model, name) {
+  if(name %in% rownames(summary(model)$coef)) {
+    coef <- summary(model)$coef[name, "Estimate"]
+    pval <- summary(model)$coef[name, "Pr(>|z|)"]
+    stars <- ifelse(pval < 0.001, "***", 
+                   ifelse(pval < 0.01, "**", 
+                         ifelse(pval < 0.05, "*", "")))
+    sprintf("%.2f%s", coef, stars)
+  } else {
+    "—"
+  }
+}
+
+exog_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.cosponsor_matrix_pre", 
+           "edgecov.coalition_matrix_pre", "",
+           "AIC", "BIC", "Log Likelihood"),
+  Model1 = c(get_coef(exog1, "edges"),
+             get_coef(exog1, "absdiff.left_right"),
+             "—", "—", "",
+             sprintf("%.1f", AIC(exog1)),
+             sprintf("%.1f", BIC(exog1)),
+             sprintf("%.1f", logLik(exog1))),
+  Model2 = c(get_coef(exog2, "edges"),
+             get_coef(exog2, "absdiff.left_right"),
+             get_coef(exog2, "edgecov.cosponsor_matrix_pre"),
+             "—", "",
+             sprintf("%.1f", AIC(exog2)),
+             sprintf("%.1f", BIC(exog2)),
+             sprintf("%.1f", logLik(exog2))),
+  Model3 = c(get_coef(exog3, "edges"),
+             get_coef(exog3, "absdiff.left_right"),
+             "—",
+             get_coef(exog3, "edgecov.coalition_matrix_pre"),
+             "",
+             sprintf("%.1f", AIC(exog3)),
+             sprintf("%.1f", BIC(exog3)),
+             sprintf("%.1f", logLik(exog3))),
+  Model4 = c(get_coef(exog4, "edges"),
+             get_coef(exog4, "absdiff.left_right"),
+             get_coef(exog4, "edgecov.cosponsor_matrix_pre"),
+             get_coef(exog4, "edgecov.coalition_matrix_pre"),
+             "",
+             sprintf("%.1f", AIC(exog4)),
+             sprintf("%.1f", BIC(exog4)),
+             sprintf("%.1f", logLik(exog4)))
+)
+
+colnames(exog_table) <- c("Term", "Model 1", "Model 2", "Model 3", "Model 4")
+knitr::kable(exog_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+### Testing Endogenous Terms {#sec-stepwise-endog}
+
+```{r}
+#| label: tbl-stepwise-endog
+#| tbl-cap: "Stepwise ERGM: Adding Endogenous Terms for Pre-Election Q3 Network"
+
+# Load stepwise endogenous models
+endog1 <- readRDS("../results/tests/stepwise_endog1_pre_q3.rds")
+endog2 <- readRDS("../results/tests/stepwise_endog2_pre_q3.rds")
+endog3 <- readRDS("../results/tests/stepwise_endog3_pre_q3.rds")
+endog4 <- readRDS("../results/tests/stepwise_endog4_pre_q3.rds")
+
+endog_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.cosponsor_matrix_pre", 
+           "edgecov.coalition_matrix_pre", "kstar3", "gwesp.fixed.0.7", "",
+           "AIC", "BIC", "Log Likelihood"),
+  Model1 = c(get_coef(endog1, "edges"),
+             get_coef(endog1, "absdiff.left_right"),
+             get_coef(endog1, "edgecov.cosponsor_matrix_pre"),
+             get_coef(endog1, "edgecov.coalition_matrix_pre"),
+             "—", "—", "",
+             sprintf("%.1f", AIC(endog1)),
+             sprintf("%.1f", BIC(endog1)),
+             sprintf("%.1f", logLik(endog1))),
+  Model2 = c(get_coef(endog2, "edges"),
+             get_coef(endog2, "absdiff.left_right"),
+             get_coef(endog2, "edgecov.cosponsor_matrix_pre"),
+             get_coef(endog2, "edgecov.coalition_matrix_pre"),
+             get_coef(endog2, "kstar3"),
+             "—", "",
+             sprintf("%.1f", AIC(endog2)),
+             sprintf("%.1f", BIC(endog2)),
+             sprintf("%.1f", logLik(endog2))),
+  Model3 = c(get_coef(endog3, "edges"),
+             get_coef(endog3, "absdiff.left_right"),
+             get_coef(endog3, "edgecov.cosponsor_matrix_pre"),
+             get_coef(endog3, "edgecov.coalition_matrix_pre"),
+             "—",
+             get_coef(endog3, "gwesp.fixed.0.7"),
+             "",
+             sprintf("%.1f", AIC(endog3)),
+             sprintf("%.1f", BIC(endog3)),
+             sprintf("%.1f", logLik(endog3))),
+  Model4 = c(get_coef(endog4, "edges"),
+             get_coef(endog4, "absdiff.left_right"),
+             get_coef(endog4, "edgecov.cosponsor_matrix_pre"),
+             get_coef(endog4, "edgecov.coalition_matrix_pre"),
+             get_coef(endog4, "kstar3"),
+             get_coef(endog4, "gwesp.fixed.0.7"),
+             "",
+             sprintf("%.1f", AIC(endog4)),
+             sprintf("%.1f", BIC(endog4)),
+             sprintf("%.1f", logLik(endog4)))
+)
+
+colnames(endog_table) <- c("Term", "Model 1", "Model 2", "Model 3", "Model 4")
+knitr::kable(endog_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+### Testing GWESP Decay Parameters {#sec-stepwise-decay}
+
+```{r}
+#| label: tbl-stepwise-decay
+#| tbl-cap: "Stepwise ERGM: Testing GWESP Decay Parameters for Pre-Election Q3 Network"
+
+# Load decay test models
+decay1 <- readRDS("../results/tests/stepwise_decay1_pre_q3.rds")
+decay2 <- readRDS("../results/tests/stepwise_decay2_pre_q3.rds")
+decay3 <- readRDS("../results/tests/stepwise_decay3_pre_q3.rds")
+decay4 <- readRDS("../results/tests/stepwise_decay4_pre_q3.rds")
+
+decay_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.cosponsor_matrix_pre", 
+           "edgecov.coalition_matrix_pre", "kstar3", "gwesp.fixed.0.7",
+           "gwesp.fixed.0.75", "gwesp.fixed.0.8", "gwesp.fixed.0.85", "",
+           "AIC", "BIC", "Log Likelihood"),
+  Model1 = c(get_coef(decay1, "edges"),
+             get_coef(decay1, "absdiff.left_right"),
+             get_coef(decay1, "edgecov.cosponsor_matrix_pre"),
+             get_coef(decay1, "edgecov.coalition_matrix_pre"),
+             get_coef(decay1, "kstar3"),
+             get_coef(decay1, "gwesp.fixed.0.7"),
+             "—", "—", "—", "",
+             sprintf("%.1f", AIC(decay1)),
+             sprintf("%.1f", BIC(decay1)),
+             sprintf("%.1f", logLik(decay1))),
+  Model2 = c(get_coef(decay2, "edges"),
+             get_coef(decay2, "absdiff.left_right"),
+             get_coef(decay2, "edgecov.cosponsor_matrix_pre"),
+             get_coef(decay2, "edgecov.coalition_matrix_pre"),
+             get_coef(decay2, "kstar3"),
+             "—",
+             get_coef(decay2, "gwesp.fixed.0.75"),
+             "—", "—", "",
+             sprintf("**%.1f**", AIC(decay2)),
+             sprintf("**%.1f**", BIC(decay2)),
+             sprintf("**%.1f**", logLik(decay2))),
+  Model3 = c(get_coef(decay3, "edges"),
+             get_coef(decay3, "absdiff.left_right"),
+             get_coef(decay3, "edgecov.cosponsor_matrix_pre"),
+             get_coef(decay3, "edgecov.coalition_matrix_pre"),
+             get_coef(decay3, "kstar3"),
+             "—", "—",
+             get_coef(decay3, "gwesp.fixed.0.8"),
+             "—", "",
+             sprintf("%.1f", AIC(decay3)),
+             sprintf("%.1f", BIC(decay3)),
+             sprintf("%.1f", logLik(decay3))),
+  Model4 = c(get_coef(decay4, "edges"),
+             get_coef(decay4, "absdiff.left_right"),
+             get_coef(decay4, "edgecov.cosponsor_matrix_pre"),
+             get_coef(decay4, "edgecov.coalition_matrix_pre"),
+             get_coef(decay4, "kstar3"),
+             "—", "—", "—",
+             get_coef(decay4, "gwesp.fixed.0.85"),
+             "",
+             sprintf("%.1f", AIC(decay4)),
+             sprintf("%.1f", BIC(decay4)),
+             sprintf("%.1f", logLik(decay4)))
+)
+
+colnames(decay_table) <- c("Term", "Model 1", "Model 2", "Model 3", "Model 4")
+knitr::kable(decay_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+## D: Final Model Definition for the Pre-election Network {#sec-appendix-d}
+
+The final pre-election ERGM was estimated using the following specification:
+
+```{r}
+#| eval: false
+#| echo: true
+
+# ERGM control parameters
+ergm_control <- ergm::control.ergm(
+  MCMC.burnin = 7000,
+  MCMC.samplesize = 20000,
+  MCMC.interval = 1500,
+  seed = 1234,
+  MCMLE.maxit = 40,
+  parallel = 5,
+  parallel.type = "PSOCK",
+  MCMC.prop = ~sparse + .triadic
+)
+
+# Final Models (Q3 threshold, decay 0.75)
+FinalModel_pre_q3 <- ergm::ergm(
+  net_pre_q3 ~ 
+    edges + absdiff("left_right") + 
+    edgecov(coalition_matrix_pre) + edgecov(cosponsor_matrix_pre) +
+    kstar(3) + gwesp(0.75, fixed = TRUE),
+  control = ergm_control
+)
+```
+
+{{<pagebreak>}}
+
+## E: MCMC Diagnostics for Final Pre-Election Model {#sec-appendix-e}
+
+This appendix presents the Markov Chain Monte Carlo (MCMC) diagnostics for the final pre-election Q3 model.
+
+\includegraphics[width=\textwidth,page=1]{../results/ergm_diagnostics/final_pre_q3_mcmc.pdf}
+
+\includegraphics[width=\textwidth,page=2]{../results/ergm_diagnostics/final_pre_q3_mcmc.pdf}
+
+{{<pagebreak>}}
+
+## F: Goodness-of-Fit Diagnostics for Final Pre-Election Model {#sec-appendix-f}
+
+This appendix presents the goodness-of-fit (GOF) diagnostics for the final pre-election Q3 model.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=1]{../results/ergm_diagnostics/final_pre_q3_gof.pdf}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=2]{../results/ergm_diagnostics/final_pre_q3_gof.pdf}
+\end{minipage}
+
+\vspace{0.5cm}
+
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=3]{../results/ergm_diagnostics/final_pre_q3_gof.pdf}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=4]{../results/ergm_diagnostics/final_pre_q3_gof.pdf}
+\end{minipage}
+\end{figure}
+
+{{<pagebreak>}}
+
+## G: Hierarchial Building for the Q3 Thresholded Post-formation Network {#sec-appendix-g}
+
+This appendix presents the stepwise model building process for the post-formation Q3 thresholded network. The final ERGM for the post-formation network was chosen after comparing several stepwise model builds.
+
+During the model development process, numerous model specifications were tested and systematically documented to identify the optimal configuration. @fig-building-post shows the complete testing overview for the post-formation network.
+
+![Model Testing Overview for Post-Formation Network](building_post.png){#fig-building-post width=100% fig-pos='H'}
+
+{{< pagebreak >}}
+
+### Stepwise Model Building - Exogenous Predictors {#sec-stepwise-exog-post}
+
+```{r}
+#| label: tbl-stepwise-exog-post
+#| tbl-cap: "Stepwise ERGM: Adding Exogenous Predictors for Post-Formation Q3 Network"
+
+# Load exogenous test models
+exog1 <- readRDS("../results/tests/stepwise_exog1_post_q3.rds")
+exog2 <- readRDS("../results/tests/stepwise_exog2_post_q3.rds")
+exog3 <- readRDS("../results/tests/stepwise_exog3_post_q3.rds")
+exog4 <- readRDS("../results/tests/stepwise_exog4_post_q3.rds")
+
+# Helper function
+get_coef <- function(model, term_name) {
+  coefs <- summary(model)$coefficients
+  if (term_name %in% rownames(coefs)) {
+    est <- coefs[term_name, "Estimate"]
+    pval <- coefs[term_name, "Pr(>|z|)"]
+    stars <- ifelse(pval < 0.001, "***", 
+                    ifelse(pval < 0.01, "**", 
+                           ifelse(pval < 0.05, "*", "")))
+    return(sprintf("%.3f%s", est, stars))
+  } else {
+    return("—")
+  }
+}
+
+exog_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.cosponsor_matrix_post", 
+           "edgecov.coalition_matrix_post", "",
+           "AIC", "BIC", "Log Likelihood"),
+  Model1 = c(get_coef(exog1, "edges"),
+             get_coef(exog1, "absdiff.left_right"),
+             "—", "—", "",
+             sprintf("%.1f", AIC(exog1)),
+             sprintf("%.1f", BIC(exog1)),
+             sprintf("%.1f", logLik(exog1))),
+  Model2 = c(get_coef(exog2, "edges"),
+             get_coef(exog2, "absdiff.left_right"),
+             get_coef(exog2, "edgecov.cosponsor_matrix_post"),
+             "—", "",
+             sprintf("%.1f", AIC(exog2)),
+             sprintf("%.1f", BIC(exog2)),
+             sprintf("%.1f", logLik(exog2))),
+  Model3 = c(get_coef(exog3, "edges"),
+             get_coef(exog3, "absdiff.left_right"),
+             "—",
+             get_coef(exog3, "edgecov.coalition_matrix_post"),
+             "",
+             sprintf("%.1f", AIC(exog3)),
+             sprintf("%.1f", BIC(exog3)),
+             sprintf("%.1f", logLik(exog3))),
+  Model4 = c(get_coef(exog4, "edges"),
+             get_coef(exog4, "absdiff.left_right"),
+             get_coef(exog4, "edgecov.cosponsor_matrix_post"),
+             get_coef(exog4, "edgecov.coalition_matrix_post"),
+             "",
+             sprintf("%.1f", AIC(exog4)),
+             sprintf("%.1f", BIC(exog4)),
+             sprintf("%.1f", logLik(exog4)))
+)
+
+colnames(exog_table) <- c("Term", "Model 1", "Model 2", "Model 3", "Model 4")
+knitr::kable(exog_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+### Stepwise Model Building - Endogenous Predictors {#sec-stepwise-endog-post}
+
+```{r}
+#| label: tbl-stepwise-endog-post
+#| tbl-cap: "Stepwise ERGM: Adding Endogenous Predictors for Post-Formation Q3 Network"
+
+# Load endogenous test models
+endog1 <- readRDS("../results/tests/stepwise_endog1_post_q3.rds")
+endog2 <- readRDS("../results/tests/stepwise_endog2_post_q3.rds")
+endog3 <- readRDS("../results/tests/stepwise_endog3_post_q3.rds")
+endog4 <- readRDS("../results/tests/stepwise_endog4_post_q3.rds")
+
+endog_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.cosponsor_matrix_post", 
+           "edgecov.coalition_matrix_post", "kstar3", "gwesp.fixed.0.7", "",
+           "AIC", "BIC", "Log Likelihood"),
+  Model1 = c(get_coef(endog1, "edges"),
+             get_coef(endog1, "absdiff.left_right"),
+             get_coef(endog1, "edgecov.cosponsor_matrix_post"),
+             get_coef(endog1, "edgecov.coalition_matrix_post"),
+             "—", "—", "",
+             sprintf("%.1f", AIC(endog1)),
+             sprintf("%.1f", BIC(endog1)),
+             sprintf("%.1f", logLik(endog1))),
+  Model2 = c(get_coef(endog2, "edges"),
+             get_coef(endog2, "absdiff.left_right"),
+             get_coef(endog2, "edgecov.cosponsor_matrix_post"),
+             get_coef(endog2, "edgecov.coalition_matrix_post"),
+             get_coef(endog2, "kstar3"),
+             "—", "",
+             sprintf("%.1f", AIC(endog2)),
+             sprintf("%.1f", BIC(endog2)),
+             sprintf("%.1f", logLik(endog2))),
+  Model3 = c(get_coef(endog3, "edges"),
+             get_coef(endog3, "absdiff.left_right"),
+             get_coef(endog3, "edgecov.cosponsor_matrix_post"),
+             get_coef(endog3, "edgecov.coalition_matrix_post"),
+             "—",
+             get_coef(endog3, "gwesp.fixed.0.7"),
+             "",
+             sprintf("%.1f", AIC(endog3)),
+             sprintf("%.1f", BIC(endog3)),
+             sprintf("%.1f", logLik(endog3))),
+  Model4 = c(get_coef(endog4, "edges"),
+             get_coef(endog4, "absdiff.left_right"),
+             get_coef(endog4, "edgecov.cosponsor_matrix_post"),
+             get_coef(endog4, "edgecov.coalition_matrix_post"),
+             get_coef(endog4, "kstar3"),
+             get_coef(endog4, "gwesp.fixed.0.7"),
+             "",
+             sprintf("**%.1f**", AIC(endog4)),
+             sprintf("**%.1f**", BIC(endog4)),
+             sprintf("**%.1f**", logLik(endog4)))
+)
+
+colnames(endog_table) <- c("Term", "Model 1", "Model 2", "Model 3", "Model 4")
+knitr::kable(endog_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+### Testing GWESP Decay Parameters {#sec-stepwise-decay-post}
+
+```{r}
+#| label: tbl-stepwise-decay-post
+#| tbl-cap: "Stepwise ERGM: Testing GWESP Decay Parameters for Post-Formation Q3 Network"
+
+# Load decay test models
+decay1 <- readRDS("../results/tests/stepwise_decay1_post_q3.rds")
+decay2 <- readRDS("../results/tests/stepwise_decay2_post_q3.rds")
+decay3 <- readRDS("../results/tests/stepwise_decay3_post_q3.rds")
+decay4 <- readRDS("../results/tests/stepwise_decay4_post_q3.rds")
+
+decay_table <- data.frame(
+  Term = c("edges", "absdiff.left_right", "edgecov.cosponsor_matrix_post", 
+           "edgecov.coalition_matrix_post", "kstar3", "gwesp.fixed.0.7",
+           "gwesp.fixed.0.75", "gwesp.fixed.0.8", "gwesp.fixed.0.85", "",
+           "AIC", "BIC", "Log Likelihood"),
+  Model1 = c(get_coef(decay1, "edges"),
+             get_coef(decay1, "absdiff.left_right"),
+             get_coef(decay1, "edgecov.cosponsor_matrix_post"),
+             get_coef(decay1, "edgecov.coalition_matrix_post"),
+             get_coef(decay1, "kstar3"),
+             get_coef(decay1, "gwesp.fixed.0.7"),
+             "—", "—", "—", "",
+             sprintf("%.1f", AIC(decay1)),
+             sprintf("%.1f", BIC(decay1)),
+             sprintf("%.1f", logLik(decay1))),
+  Model2 = c(get_coef(decay2, "edges"),
+             get_coef(decay2, "absdiff.left_right"),
+             get_coef(decay2, "edgecov.cosponsor_matrix_post"),
+             get_coef(decay2, "edgecov.coalition_matrix_post"),
+             get_coef(decay2, "kstar3"),
+             "—",
+             get_coef(decay2, "gwesp.fixed.0.75"),
+             "—", "—", "",
+             sprintf("**%.1f**", AIC(decay2)),
+             sprintf("**%.1f**", BIC(decay2)),
+             sprintf("**%.1f**", logLik(decay2))),
+  Model3 = c(get_coef(decay3, "edges"),
+             get_coef(decay3, "absdiff.left_right"),
+             get_coef(decay3, "edgecov.cosponsor_matrix_post"),
+             get_coef(decay3, "edgecov.coalition_matrix_post"),
+             get_coef(decay3, "kstar3"),
+             "—", "—",
+             get_coef(decay3, "gwesp.fixed.0.8"),
+             "—", "",
+             sprintf("%.1f", AIC(decay3)),
+             sprintf("%.1f", BIC(decay3)),
+             sprintf("%.1f", logLik(decay3))),
+  Model4 = c(get_coef(decay4, "edges"),
+             get_coef(decay4, "absdiff.left_right"),
+             get_coef(decay4, "edgecov.cosponsor_matrix_post"),
+             get_coef(decay4, "edgecov.coalition_matrix_post"),
+             get_coef(decay4, "kstar3"),
+             "—", "—", "—",
+             get_coef(decay4, "gwesp.fixed.0.85"),
+             "",
+             sprintf("%.1f", AIC(decay4)),
+             sprintf("%.1f", BIC(decay4)),
+             sprintf("%.1f", logLik(decay4)))
+)
+
+colnames(decay_table) <- c("Term", "Model 1", "Model 2", "Model 3", "Model 4")
+knitr::kable(decay_table, align = 'lrrrr', format = "pipe")
+```
+
+*Note: \*\*\* p < 0.001; \*\* p < 0.01; \* p < 0.05*
+
+{{<pagebreak>}}
+
+## H: Final Model Definition for the Post-formation Network {#sec-appendix-h}
+
+The final post-formation ERGM was estimated using the following specification:
+
+```{r}
+#| eval: false
+#| echo: true
+
+# ERGM control parameters
+ergm_control <- ergm::control.ergm(
+  MCMC.burnin = 7000,
+  MCMC.samplesize = 20000,
+  MCMC.interval = 1500,
+  seed = 1234,
+  MCMLE.maxit = 40,
+  parallel = 5,
+  parallel.type = "PSOCK",
+  MCMC.prop = ~sparse + .triadic
+)
+
+# Final post-formation model (Q3 threshold, decay 0.75)
+FinalModel_post_q3 <- ergm::ergm(
+  net_post_q3 ~ 
+    edges + absdiff("left_right") + 
+    edgecov(coalition_matrix_post) + edgecov(cosponsor_matrix_post) +
+    kstar(3) + gwesp(0.75, fixed = TRUE),
+  control = ergm_control
+)
+```
+
+{{<pagebreak>}}
+
+## I: MCMC Diagnostics for Final Post-formation Model {#sec-appendix-i}
+
+This appendix presents the Markov Chain Monte Carlo (MCMC) diagnostics for the final post-formation Q3 model.
+
+\includegraphics[width=\textwidth,page=1]{../results/ergm_diagnostics/final_post_q3_mcmc.pdf}
+
+\includegraphics[width=\textwidth,page=2]{../results/ergm_diagnostics/final_post_q3_mcmc.pdf}
+
+{{<pagebreak>}}
+
+## J: Goodness-of-Fit Diagnostics for Final Post-formation Model {#sec-appendix-j}
+
+This appendix presents the goodness-of-fit (GOF) diagnostics for the final post-formation Q3 model.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=1]{../results/ergm_diagnostics/final_post_q3_gof.pdf}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=2]{../results/ergm_diagnostics/final_post_q3_gof.pdf}
+\end{minipage}
+
+\vspace{0.5cm}
+
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=3]{../results/ergm_diagnostics/final_post_q3_gof.pdf}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\includegraphics[width=\textwidth,page=4]{../results/ergm_diagnostics/final_post_q3_gof.pdf}
+\end{minipage}
+\end{figure}

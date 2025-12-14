@@ -1,0 +1,21 @@
+Call:
+ergm::ergm(formula = net_post_mean ~ edges + absdiff("left_right") + 
+    edgecov(coalition_matrix_post) + edgecov(cosponsor_matrix_post) + 
+    kstar(3) + gwesp(0.7, fixed = TRUE), control = ergm_control)
+
+Monte Carlo Maximum Likelihood Results:
+
+                              Estimate Std. Error MCMC % z value Pr(>|z|)    
+edges                         -5.77641    2.50933      0  -2.302  0.02134 *  
+absdiff.left_right            -2.44750    1.03092      0  -2.374  0.01759 *  
+edgecov.coalition_matrix_post -0.15394    0.47459      0  -0.324  0.74567    
+edgecov.cosponsor_matrix_post  0.02907    0.01073      0   2.710  0.00674 ** 
+kstar3                        -0.08885    0.02091      0  -4.248  < 1e-04 ***
+gwesp.fixed.0.7                4.33165    1.20907      0   3.583  0.00034 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+     Null Deviance: 145.56  on 105  degrees of freedom
+ Residual Deviance:  55.78  on  99  degrees of freedom
+ 
+AIC: 67.78  BIC: 83.71  (Smaller is better. MC Std. Err. = 0.07823)
